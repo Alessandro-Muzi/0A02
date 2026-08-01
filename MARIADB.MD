@@ -1,8 +1,8 @@
-----------------------------------------------------------------------------------
-       ##MARIADB
-----------------------------------------------------------------------------------
 
-```
+## MARIADB
+
+
+```yaml
 
 /koha-ansible/roles/mariadb/handlers/main.yml
 
@@ -17,7 +17,7 @@
 /koha-ansible/roles/mariadb/tasks/main.yml
 
 
-```
+```yaml
 
 - name: Installo libreria Python per MySQL
   apt:
@@ -57,7 +57,7 @@
 
 /koha-ansible/roles/mariadb/templates/koha.cnf.j2
 
-```
+```ini
 
 [mysqld]
 # Impostazioni ottimizzate per Koha
