@@ -2,10 +2,10 @@
 ## KOHA
 
 
+/koha-ansible/roles/koha/handlers/main.yml
+
 
 ```yaml
-
-/koha-ansible/roles/koha/handlers/main.yml
 
 - name: Riavviare Apache
   ansible.builtin.service:
