@@ -3,7 +3,7 @@
 
 /koha-ansible/ansible.cfg
 
-```
+```ini
 
 [defaults]
 inventory = hosts
