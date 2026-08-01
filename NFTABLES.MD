@@ -1,11 +1,11 @@
 
 
-    ## NFTABLES
+## NFTABLES
 
 
 ```yaml
 
-# roles/nftables/defaults/main.yml
+roles/nftables/defaults/main.yml
 
 
 nftables_wan_iface: "enp0s3"
@@ -20,7 +20,7 @@ nftables_wireguard_port: 51820
 
 
 
-# roles/nftables/handlers/main.yml
+roles/nftables/handlers/main.yml
 
 ```yaml
 
@@ -34,7 +34,7 @@ nftables_wireguard_port: 51820
 
 
 
-# roles/nftables/tasks/main.yml
+roles/nftables/tasks/main.yml
 
 ```yaml
 
@@ -72,7 +72,7 @@ nftables_wireguard_port: 51820
 
 
 
-# roles/nftables/templates/nftables.conf.j2
+roles/nftables/templates/nftables.conf.j2
 
 
 ```bash
