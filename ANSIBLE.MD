@@ -1,7 +1,7 @@
 
 ## ANSIBLE
 
-## /koha-ansible/ansible.cfg
+/koha-ansible/ansible.cfg
 
 ```ini
 
@@ -15,7 +15,7 @@ pipelining = True
 
 
 
-## /koha-ansible/playbook.yml
+/koha-ansible/playbook.yml
 
 ```yaml
 
