@@ -17,7 +17,7 @@ pipelining = True
 
 /koha-ansible/playbook.yml
 
-```
+```yaml
 
 - name: Configurazione Server Koha
   hosts: debian
@@ -42,7 +42,7 @@ pipelining = True
 
 /koha-ansible/hosts
 
-```
+```ini
 
 [debian]
 SERVER ansible_host=192.168.1.4 ansible_user=root
