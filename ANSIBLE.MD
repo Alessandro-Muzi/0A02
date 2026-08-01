@@ -57,7 +57,7 @@ ZABBIX ansible_host=10.0.0.20 ansible_user=root ansible_ssh_common_args='-o Prox
 
 /koha-ansible/group_vars/vars.yml
 
-```
+```yaml
 
 ldap_organization: "Biblioteca di Alessandro"
 ldap_host: "localhost" # O l'IP del server dove gira OpenLDAP
