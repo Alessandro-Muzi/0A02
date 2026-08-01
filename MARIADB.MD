@@ -2,9 +2,10 @@
 ## MARIADB
 
 
-```yaml
-
 /koha-ansible/roles/mariadb/handlers/main.yml
+
+
+```yaml
 
 - name: Riavvia MariaDB
   service:
