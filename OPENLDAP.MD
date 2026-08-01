@@ -2,10 +2,11 @@
 ## OPENLDAP
 
 
-```yaml
 
 /koha-ansible/roles/openldap/tasks/main.yml
 
+
+```yaml
 
 - name: Installo OpenLDAP e utility di gestione
   ansible.builtin.apt:
