@@ -1,5 +1,5 @@
 
-          ## HEADSCALE
+## HEADSCALE
 
 
 
@@ -146,7 +146,7 @@ dns:
 
 
 
-             ## HEADSCALE-CLIENT
+## HEADSCALE-CLIENT
 
 
 
