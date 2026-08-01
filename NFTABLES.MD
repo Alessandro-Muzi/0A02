@@ -1,9 +1,9 @@
 
-----------------------------------------------------------------------------------
-    ##NFTABLES
-----------------------------------------------------------------------------------
 
-```
+    ## NFTABLES
+
+
+```yaml
 
 # roles/nftables/defaults/main.yml
 
@@ -22,7 +22,7 @@ nftables_wireguard_port: 51820
 
 # roles/nftables/handlers/main.yml
 
-```
+```yaml
 
 - name: Ricarica nftables
   ansible.builtin.systemd:
@@ -36,7 +36,7 @@ nftables_wireguard_port: 51820
 
 # roles/nftables/tasks/main.yml
 
-```
+```yaml
 
 - name: Installa nftables
   ansible.builtin.apt:
@@ -75,7 +75,7 @@ nftables_wireguard_port: 51820
 # roles/nftables/templates/nftables.conf.j2
 
 
-```
+```bash
 
 #!/usr/sbin/nft -f
 flush ruleset
