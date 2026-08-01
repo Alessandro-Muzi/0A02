@@ -4,7 +4,7 @@
 
 /koha-ansible/roles/bind9/handlers/main.yml
 
-```
+```yaml
 
 - name: riavvia bind9
   service:
@@ -18,7 +18,7 @@
 
 /koha-ansible/roles/bind9/tasks/main.yml
 
-```
+```yaml
 
 - name: Installo Bind9 e strumenti di utilità
   apt:
@@ -74,7 +74,7 @@
 
 /koha-ansible/roles/bind9/templates/db.192.168.1.j2
 
-```
+```text
 
 $TTL 604800
 @   IN  SOA ns1.koha.lab. admin.koha.lab. (
@@ -97,7 +97,7 @@ $TTL 604800
 
 /koha-ansible/roles/bind9/templates/db.koha.lab.j2
 
-```
+```text
 
 $TTL 604800
 @   IN  SOA ns1.koha.lab. admin.koha.lab. (
@@ -108,9 +108,9 @@ $TTL 604800
             604800 )   ; Negative Cache TTL
 
 @       IN  NS  ns1.koha.lab.
-ns1     IN  A   192.168.1.5
-opac    IN  A   192.168.1.5
-intranet IN A   192.168.1.5
+ns1     IN  A   192.168.1.4
+opac    IN  A   192.168.1.4
+intranet IN A   192.168.1.4
 
 ```
 
@@ -119,7 +119,7 @@ intranet IN A   192.168.1.5
 /koha-ansible/roles/bind9/templates/named.conf.local.j2
 
 
-```
+```text
 
 zone "koha.lab" {
     type master;
@@ -138,7 +138,7 @@ zone "1.168.192.in-addr.arpa" {
 
 /koha-ansible/roles/bind9/templates/named.conf.options.j2
 
-```
+```text
 
 options {
     directory "/var/cache/bind";
