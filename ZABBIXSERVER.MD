@@ -1,9 +1,9 @@
 
-----------------------------------------------------------------------------------
-              ##ZABBIX-SERVER
-----------------------------------------------------------------------------------
 
-```
+## ZABBIX-SERVER
+
+
+```yml
 
 /koha-ansible/roles/zabbix-server/defaults/main.yml
 
@@ -27,7 +27,7 @@ zabbix_import_schema: true
 
 /koha-ansible/roles/zabbix-server/handlers/main.yml
 
-```
+```yml
 
 - name: Riavviare Zabbix server
   ansible.builtin.systemd:
@@ -45,7 +45,7 @@ zabbix_import_schema: true
 
 /koha-ansible/roles/zabbix-server/tasks/main.yml
 
-```
+```yml
 
 - name: Installa dipendenze base (gnupg per repository esterni)
   ansible.builtin.apt:
