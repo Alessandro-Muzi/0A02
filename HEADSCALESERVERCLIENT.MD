@@ -150,7 +150,7 @@ dns:
 
 
 
-```
+```yaml
 
 /koha-ansible/roles/headscale-client/defaults/main.yml
 
@@ -163,7 +163,7 @@ headscale_preauth_key: "{{ vault_headscale_preauth_key }}"
 
 /koha-ansible/roles/headscale-client/defaults/main.yml
 
-```
+```yaml
 
 headscale_login_server: "http://192.168.1.4:8443"
 headscale_preauth_key: "{{ vault_headscale_preauth_key }}"
@@ -173,7 +173,7 @@ headscale_preauth_key: "{{ vault_headscale_preauth_key }}"
 
 /koha-ansible/roles/headscale-client/handlers/main.yml
 
-```
+```yaml
 
 - name: Aggiorna cache apt
   ansible.builtin.apt:
@@ -186,7 +186,7 @@ headscale_preauth_key: "{{ vault_headscale_preauth_key }}"
 /koha-ansible/roles/headscale-client/tasks/main.yml
 
 
-```
+```yaml
 
 - name: Installa dipendenze per il repository Tailscale
   ansible.builtin.apt:
