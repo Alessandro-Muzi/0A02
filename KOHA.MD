@@ -1,9 +1,9 @@
-----------------------------------------------------------------------------------
-             ##KOHA
-----------------------------------------------------------------------------------
+
+## KOHA
 
 
-```
+
+```yaml
 
 /koha-ansible/roles/koha/handlers/main.yml
 
@@ -19,7 +19,7 @@
 
 /koha-ansible/roles/koha/tasks/instance.yml
 
-```
+```yaml
 
 - name: Abilito il modulo rewrite di Apache
   community.general.apache2_module:
@@ -61,7 +61,7 @@
 
 
 
-```                                                                              
+```yaml                                                                              
 
 - name: Mi assicuro che la directory dei keyring esista
   ansible.builtin.file:
