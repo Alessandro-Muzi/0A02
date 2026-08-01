@@ -6,7 +6,7 @@
 ```
 
 [defaults]
-inventory = inventory.ini
+inventory = hosts
 host_key_checking = False
 pipelining = True
 
@@ -15,7 +15,7 @@ pipelining = True
 
 
 
-/koha-ansible/playbook.cfg
+/koha-ansible/playbook.yml
 
 ```
 
