@@ -3,9 +3,11 @@
 ## ZABBIX-SERVER
 
 
-```yml
 
 /koha-ansible/roles/zabbix-server/defaults/main.yml
+
+
+```yml
 
 zabbix_version: "7.0"
 # Nome in codice della release Debian (es. "trixie", "bookworm") — verificata
