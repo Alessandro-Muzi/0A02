@@ -47,9 +47,7 @@ headscale_base_domain: "lab.internal"
 
 - name: Scarica il pacchetto .deb di Headscale dalla release ufficiale GitHub
   ansible.builtin.get_url:
-    url: >-
-      "https://github.com/juanfont/headscale/releases/download/v
-      {{ headscale_version }}/headscale_{{ headscale_version }}_linux_amd64.deb"
+    url: "https://github.com/juanfont/headscale/releases/download/v{{ headscale_version }}/headscale_{{ headscale_version }}_linux_amd64.deb"
     dest: "/tmp/headscale_{{ headscale_version }}.deb"
     mode: '0644'
   register: headscale_download
