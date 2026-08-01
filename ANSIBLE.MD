@@ -1,5 +1,5 @@
 
-##ANSIBLE
+## ANSIBLE
 
 /koha-ansible/ansible.cfg
 
