@@ -5,7 +5,7 @@
 
 /koha-ansible/roles/headscale/defaults/main.yml
 
-```
+```yaml
 # Dominio pubblico (o interno) su cui sarà raggiungibile Headscale
 headscale_server_url: "https://192.168.1.4:8443"
 
@@ -30,7 +30,8 @@ headscale_base_domain: "lab.internal"
 
 /koha-ansible/roles/headscale/handlers/main.yml
 
-```
+```yaml
+
 - name: riavvia headscale
   ansible.builtin.systemd:
     name: headscale
@@ -42,7 +43,7 @@ headscale_base_domain: "lab.internal"
 /koha-ansible/roles/headscale/tasks/main.yml
 
 
-```
+```yaml
 
 - name: Scarica il pacchetto .deb di Headscale dalla release ufficiale GitHub
   ansible.builtin.get_url:
@@ -101,7 +102,7 @@ headscale_base_domain: "lab.internal"
 /koha-ansible/roles/headscale/templates/config.yaml.j2
 
 
-```
+```yaml
 
 server_url: {{ headscale_server_url }}
 listen_addr: 0.0.0.0:{{ headscale_listen_port }}  # NON 127.0.0.1: vedi troubleshooting "chain input"
