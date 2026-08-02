@@ -2,13 +2,13 @@
 
 ## Perché una VM separata
 
-A differenza degli altri servizi, Zabbix vive su una macchina fisicamente distinta dal server principale (Koha/OpenLDAP/Headscale), collegata tramite una rete interna dedicata (LAN03). La scelta non è casuale: un sistema di monitoraggio che condivide l'host con ciò che deve sorvegliare eredita gli stessi punti di guasto — se il server principale ha un problema serio, il monitoring rischia di scomparire proprio nel momento in cui servirebbe di più.
+A differenza degli altri servizi, Zabbix vive su una macchina distinta dal server principale (Koha/OpenLDAP/Headscale), collegata tramite una rete interna dedicata (LAN03). La scelta non è casuale: un sistema di monitoraggio che condivide l'host con ciò che deve sorvegliare eredita gli stessi punti di guasto — se il server principale ha un problema serio, il monitoring rischia di scomparire proprio nel momento in cui servirebbe di più.
 
 ## Installazione
 
 Zabbix 7.0 LTS, con MariaDB dedicata (non condivisa con quella di Koha, per lo stesso principio di isolamento) e frontend su Apache.
 
-Il repository ufficiale non distribuisce ancora un pacchetto `.deb` per nome file specifico per Debian 13 "Trixie" — ma la struttura APT standard (`dists/trixie/`) esiste ed è funzionante. Il ruolo aggiunge quindi il repository nel modo standard, con chiave GPG referenziata esplicitamente:
+Il repository ufficiale non distribuisce ancora un pacchetto `.deb` per nome file specifico per Debian 13 "Trixie" , ma la struttura APT standard (`dists/trixie/`) esiste ed è funzionante. Il ruolo aggiunge quindi il repository nel modo standard, con chiave GPG referenziata esplicitamente:
 
 ```yaml
 - name: Aggiungi il repository APT di Zabbix
