@@ -56,7 +56,7 @@ La verifica diretta del file generato sul server ha reso il problema visibile a 
 
 ```bash
 /etc/headscale/config.yaml
-```
+
 ```yaml
 server_url: http://192.168.1.4:8443
 listen_addr: 127.0.0.1:8443
