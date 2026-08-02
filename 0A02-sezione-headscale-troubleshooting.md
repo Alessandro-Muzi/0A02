@@ -50,29 +50,27 @@ Error: headscale ran into an error and had to shut down: binding to TCP address:
 listen tcp 127.0.0.1:8080: bind: address already in use
 ```
 
-La porta 8080 era già occupata da Apache, che su questa stessa macchina serve anche la staff interface di Koha. Il fix richiedeva cambiare la porta di Headscale, ma il primo tentativo è stato incompleto: aggiornata solo `headscale_server_url` a `8443` in `group_vars/all/vars.yml`, lasciando invariato `headscale_listen_port` (ancora al default `8080`). Il servizio continuava a fallire con lo stesso errore.
-
-La verifica diretta del file generato sul server ha reso il problema visibile a colpo d'occhio:
-
-```bash
-/etc/headscale/config.yaml
-```
+La porta 8080 era già occupata da Apache, che su questa stessa macchina serve anche la staff interface di Koha. Il fix ha richiesto di aggiornare la porta di Headscale 
+in group_vars/all/vars.yml, sia in headscale_server_url sia in headscale_listen_port. Quest'ultima variabile, combinata con listen_addr nel template, determina 
+l'indirizzo completo (IP:porta) su cui il servizio ascolta realmente nel config.yaml generato sul server.
 
 ```yaml
-server_url: http://192.168.1.4:8443
-listen_addr: 127.0.0.1:8443
-```
-
-```bash
-/koha-ansible/group_vars/all/vars.yml
-```
-```yaml
+# /koha-ansible/group_vars/all/vars.yml
 headscale_server_url: "http://192.168.1.4:8443"
 headscale_listen_port: 8443
-
 ```
 
-Da qui in avanti, servizio stabile e `headscale users list` finalmente funzionante.
+```yaml
+# /koha-ansible/roles/headscale/templates/config.yaml.j2
+listen_addr: 0.0.0.0:{{ headscale_listen_port }}
+```
+```yaml
+# /etc/headscale/config.yaml (generato sul server)
+server_url: http://192.168.1.4:8443
+listen_addr: 0.0.0.0:8443
+```
+
+
 
 ## Conclusione
 
