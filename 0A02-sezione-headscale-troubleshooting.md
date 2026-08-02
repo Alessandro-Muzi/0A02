@@ -68,6 +68,7 @@ listen_addr: 127.0.0.1:8443
 ```yaml
 headscale_server_url: "http://192.168.1.4:8443"
 headscale_listen_port: 8443
+
 ```
 
 Da qui in avanti, servizio stabile e `headscale users list` finalmente funzionante.
