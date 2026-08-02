@@ -1,6 +1,6 @@
 # Dall'installazione al servizio stabile: il debug di Headscale
 
-Prima di arrivare a Headscale, il primo tentativo di VPN mesh per questo progetto era stato Tailscale nella sua forma originale (coordination server cloud ufficiale). La scelta è poi ricaduta su Headscale — l'implementazione open source e self-hosted dello stesso protocollo — per restare coerente con l'approccio self-hosted del resto dell'infrastruttura, senza dipendenze da un coordination server di terzi.
+Prima di arrivare a Headscale, il primo tentativo di VPN mesh per questo progetto era stato Tailscale nella sua forma originale (coordination server cloud ufficiale). La scelta è poi ricaduta su Headscale , l'implementazione open source e self-hosted dello stesso protocollo , per restare coerente con l'approccio self-hosted del resto dell'infrastruttura, senza dipendenze da un coordination server di terzi.
 
 Il primo avvio del servizio non è stato indolore: tre problemi distinti, ciascuno diagnosticato con `journalctl` prima di trovare il fix.
 
@@ -71,6 +71,6 @@ headscale_listen_port: 8443
 
 Da qui in avanti, servizio stabile e `headscale users list` finalmente funzionante.
 
-## Lezione
+## Conclusione
 
-I tre problemi, per quanto diversi, condividono lo stesso metodo di risoluzione: **non fidarsi del sintomo superficiale** (un timeout di connessione al socket può nascondere cause completamente diverse — una variabile mancante, un permesso negato, una porta occupata) e **verificare sempre lo stato reale** con `journalctl` e ispezionando il file di configurazione effettivamente generato, piuttosto che presumere che le modifiche fatte a monte (in `group_vars`) si siano propagate correttamente.
+I tre problemi, per quanto diversi, condividono lo stesso metodo di risoluzione: **non fidarsi del sintomo superficiale** (un timeout di connessione al socket può nascondere cause completamente diverse ; una variabile mancante, un permesso negato, una porta occupata) e **verificare sempre lo stato reale** con `journalctl` e ispezionando il file di configurazione effettivamente generato, piuttosto che presumere che le modifiche fatte a monte (in `group_vars`) si siano propagate correttamente.
