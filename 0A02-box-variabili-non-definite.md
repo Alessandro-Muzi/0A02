@@ -1,4 +1,4 @@
-## Un pattern ricorrente: variabili non definite
+# Un pattern ricorrente: variabili non definite
 
 Due episodi distinti nel progetto, in due ruoli diversi (OpenLDAP e Headscale), condividono la stessa identica causa: una variabile referenziata in un task ma mai dichiarata in `group_vars/all.yml`.
 
