@@ -8,7 +8,7 @@ A differenza degli altri servizi, Zabbix vive su una macchina distinta dal serve
 
 Zabbix 7.0 LTS, con MariaDB dedicata (non condivisa con quella di Koha, per lo stesso principio di isolamento) e frontend su Apache.
 
-Il repository ufficiale non distribuisce ancora un pacchetto `.deb` per nome file specifico per Debian 13 "Trixie" , ma la struttura APT standard (`dists/trixie/`) esiste ed è funzionante. Il ruolo aggiunge quindi il repository nel modo standard, con chiave GPG referenziata esplicitamente:
+Il ruolo gestisce l'aggiunta del repository in modo dichiarativo, viene definita la struttura APT standard puntando alla release Debian corretta , in questo caso Trixie ,definita nel file .. /zabbix-server/defaults/main.yml, con la chiave GPG indicata espressamente :
 
 ```yaml
 - name: Aggiungi il repository APT di Zabbix
