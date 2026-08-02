@@ -8,7 +8,7 @@ A differenza degli altri servizi, Zabbix vive su una macchina distinta dal serve
 
 Zabbix 7.0 LTS, con MariaDB dedicata (non condivisa con quella di Koha, per lo stesso principio di isolamento) e frontend su Apache.
 
-Il ruolo gestisce l'aggiunta del repository in modo dichiarativo, viene definita la struttura APT standard puntando alla release Debian corretta , in questo caso Trixie ,definita nel file .. /zabbix-server/defaults/main.yml, con la chiave GPG indicata espressamente :
+Il ruolo gestisce l'aggiunta del repository in modo dichiarativo, viene definita la struttura APT standard puntando alla release Debian corretta , in questo caso Trixie ,definita nel file .../zabbix-server/defaults/main.yml, con la chiave GPG indicata espressamente :
 
 ```yaml
 - name: Aggiungi il repository APT di Zabbix
