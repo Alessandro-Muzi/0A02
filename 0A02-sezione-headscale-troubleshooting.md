@@ -62,7 +62,8 @@ server_url: http://192.168.1.4:8443
 listen_addr: 127.0.0.1:8443
 ```
 
-koha-ansible/group_vars/all/vars.yml
+```bash
+/koha-ansible/group_vars/all/vars.yml
 
 ```yaml
 headscale_server_url: "http://192.168.1.4:8443"
