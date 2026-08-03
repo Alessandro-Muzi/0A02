@@ -42,7 +42,7 @@ mysql -u root
 ```
 ```sql
 FLUSH PRIVILEGES;
-ALTER USER 'root'@'localhost' IDENTIFIED BY 'LaTuaPasswordDefinitiva';
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'lapassword';
 FLUSH PRIVILEGES;
 ```
 
