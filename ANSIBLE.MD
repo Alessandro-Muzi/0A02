@@ -88,6 +88,7 @@
 47 directories, 35 files
 ```
 
+## Come funziona il deployment
 Ogni volta che il playbook viene eseguito, Ansible si connette agli host definiti in hosts (via SSH, con supporto ProxyJump per la rete isolata di Zabbix), applica i ruoli assegnati a ciascun gruppo in playbook.yml, e per ognuno esegue in ordine i task: installazione pacchetti, generazione dei file di configurazione dai template (con le variabili risolte da group_vars), avvio/riavvio dei servizi tramite handler quando necessario. 
 
 Il processo è idempotente: rilanciare il playbook su un'infrastruttura già configurata non produce effetti collaterali, ma verifica e corregge eventuali scostamenti dallo stato desiderato.
