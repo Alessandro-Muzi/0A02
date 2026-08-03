@@ -1,6 +1,11 @@
 
 ## ANSIBLE
 
+
+
+
+mkdir -p koha-ansible/{group_vars/{all},roles/{bind9/{defaults,files,handlers,tasks,templates},headscale/{defaults,files,handlers,tasks,templates},headscale-client/{defaults,handlers,tasks},koha/{defaults,files,handlers,tasks,templates},mariadb/{defaults,files,handlers,tasks,templates},nftables/{defaults,handlers,tasks,templates},openldap/{defaults,files,tasks,templates},zabbix-server/{defaults,handlers,tasks}}
+
 ```txt
 .
 ├── koha-ansible
