@@ -12,7 +12,7 @@ Il modulo Ansible non riusciva a connettersi come utente `root` su `localhost`: 
 **Fix**: impostare esplicitamente una password per root, e creare il file di credenziali che Ansible legge automaticamente.
 
 ```sql
-ALTER USER 'root'@'localhost' IDENTIFIED BY 'LaTuaPasswordSicura';
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'lapassword';
 FLUSH PRIVILEGES;
 ```
 
@@ -22,7 +22,7 @@ sudo nano /root/.my.cnf
 ```ini
 [client]
 user=root
-password=LaTuaPasswordSicura
+password=lapassword
 ```
 
 ```bash
