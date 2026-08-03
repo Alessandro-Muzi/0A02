@@ -34,10 +34,10 @@ mysql --defaults-file=/root/.my.cnf -e "SHOW DATABASES;"
 
 Il comando `ALTER USER`/`CREATE USER` permette di specificare il metodo di autenticazione in due modi diversi:
 
-- **`IDENTIFIED BY 'stringa'`** — password classica; il server la cifra con l'algoritmo predefinito per connessioni standard.
-- **`IDENTIFIED VIA plugin`** — delega il login a un modulo esterno. I casi più comuni sono `unix_socket` (autenticazione basata sull'utente Linux di sistema, senza password) o `gssapi`/`pam` (integrazione con domini aziendali).
+- **`IDENTIFIED BY 'stringa'`** : password classica; il server la cifra con l'algoritmo predefinito per connessioni standard.
+- **`IDENTIFIED VIA plugin`** : delega il login a un modulo esterno. I casi più comuni sono `unix_socket` (autenticazione basata sull'utente Linux di sistema, senza password) o `gssapi`/`pam` (integrazione con domini aziendali).
 
-Confondere i due — provando a combinarli, o usando `VIA` quando serve semplicemente `BY` — è la causa più comune di errori di sintassi quando si configura root da zero.
+Confondere i due, provando a combinarli, o usando `VIA` quando serve semplicemente `BY`, è la causa più comune di errori di sintassi quando si configura root da zero.
 
 ---
 
@@ -49,7 +49,7 @@ be found. The apt-key CLI has been deprecated and removed in modern Debian and
 derivatives, you might want to use "deb822_repository" instead.
 ```
 
-Il modulo per aggiungere il repository APT di Tailscale richiedeva `apt-key` o `gpg`, entrambi assenti sul sistema — `apt-key` è deprecato e rimosso nelle versioni moderne di Debian.
+Il modulo per aggiungere il repository APT di Tailscale richiedeva `apt-key` o `gpg`, entrambi assenti sul sistema, `apt-key` è deprecato e rimosso nelle versioni moderne di Debian.
 
 **Fix**: installare `gnupg` come dipendenza preliminare del ruolo.
 
