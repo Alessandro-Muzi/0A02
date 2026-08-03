@@ -94,6 +94,7 @@ Ogni volta che il playbook viene eseguito, Ansible si connette agli host definit
 
 Il processo è idempotente: rilanciare il playbook su un'infrastruttura già configurata non produce effetti collaterali, ma verifica e corregge eventuali scostamenti dallo stato desiderato.
 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 /koha-ansible/ansible.cfg
