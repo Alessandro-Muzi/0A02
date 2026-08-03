@@ -1,6 +1,94 @@
 
 ## ANSIBLE
 
+
+
+.
+├── koha-ansible
+│   ├── ansible.cfg
+│   ├── group_vars
+│   │   └── all
+│   │       ├── vars.yml
+│   │       └── vault.yml
+│   ├── hosts
+│   ├── output.log
+│   ├── playbook.yml
+│   └── roles
+│       ├── bind9
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       ├── db.192.168.1.j2
+│       │       ├── db.koha.lab.j2
+│       │       ├── named.conf.local.j2
+│       │       └── named.conf.options.j2
+│       ├── headscale
+│       │   ├── defaults
+│       │   │   └── main.yml
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       └── config.yaml.j2
+│       ├── headscale-client
+│       │   ├── defaults
+│       │   │   └── main.yml
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   └── tasks
+│       │       └── main.yml
+│       ├── koha
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   ├── instance.yml
+│       │   │   └── main.yml
+│       │   └── templates
+│       ├── mariadb
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── my-koha.cnf
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       └── koha.cnf.j2
+│       ├── nftables
+│       │   ├── defaults
+│       │   │   └── main.yml
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       └── nftables.conf.j2
+│       ├── openldap
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       └── zabbix-server
+│           ├── defaults
+│           │   └── main.yml
+│           ├── handlers
+│           │   └── main.yml
+│           └── tasks
+│               └── main.yml
+└── tree.txt
+
+47 directories, 35 files
+
+
 /koha-ansible/ansible.cfg
 
 ```ini
