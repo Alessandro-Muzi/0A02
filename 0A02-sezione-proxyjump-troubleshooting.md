@@ -35,7 +35,7 @@ Ma anche dopo questo fix, il ping da WSL verso `10.0.0.20` continuava a fallire 
 
 ## La causa reale: WSL2 non è sulla rete locale
 
-WSL2 non ha un'interfaccia di rete fisica diretta: gira in una VM Hyper-V gestita da Windows, con una propria subnet NAT interna (nell'esempio, `172.27.176.0/20`). Comunica con l'esterno tramite un livello di traduzione gestito da Windows — il fatto che riuscisse a raggiungere il server (`192.168.1.4`) non significa che avesse una vera rotta verso reti *dietro* quel server, come `10.0.0.0/24` (LAN03).
+WSL2 gira in una VM Hyper-V gestita da Windows, con una propria subnet NAT interna (nell'esempio, 172.27.176.0/20). In questo caso, riusciva a comunicare con il server(192.168.1.4) perché si trovava, in pratica, sulla stessa rete di Windows ma, non c'era rotta che permettesse la comunicazione verso LAN03.
 
 ```bash
 ip route
