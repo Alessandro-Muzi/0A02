@@ -85,7 +85,9 @@ Koha requires mod_cgi to be enabled within Apache in order to run.
     state: present
   notify: Riavviare Apache
 ```
+
 ## L'ultimo imprevisto: un'altra MariaDB, un'altra storia
+
 
 Se i problemi precedenti erano emersi nelle fasi iniziali del progetto, quello che segue è arrivato per ultimo, e su un'istanza MariaDB completamente diversa: non più quella del server Koha, ma la sua "cugina" dedicata a Zabbix, isolata per lo stesso principio che separa il monitoraggio dal servizio che sorveglia. Stesso cognome, tutt'altra vicenda.
 
