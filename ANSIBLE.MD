@@ -8,6 +8,27 @@ mkdir -p koha-ansible/{group_vars/all,roles/{bind9/{defaults,files,handlers,task
 
 ```
 
+o volendo:
+
+```bash
+#!/bin/bash
+standard=(defaults files handlers tasks templates)
+minimal=(defaults handlers tasks)
+
+mkdir -p koha-ansible/roles
+
+for role in bind9 headscale koha mariadb; do
+    for dir in "${standard[@]}"; do
+        mkdir -p "koha-ansible/roles/$role/$dir"
+    done
+done
+
+for role in headscale-client zabbix-server; do
+    for dir in "${minimal[@]}"; do
+        mkdir -p "koha-ansible/roles/$role/$dir"
+    done
+done
+```
 
 ```txt
 .
