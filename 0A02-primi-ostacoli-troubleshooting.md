@@ -85,6 +85,7 @@ Koha requires mod_cgi to be enabled within Apache in order to run.
     state: present
   notify: Riavviare Apache
 ```
+---
 
 ## L'ultimo imprevisto: un'altra MariaDB, un'altra storia
 
