@@ -85,3 +85,32 @@ Koha requires mod_cgi to be enabled within Apache in order to run.
     state: present
   notify: Riavviare Apache
 ```
+## L'ultimo imprevisto: un'altra MariaDB, un'altra storia
+
+Se i problemi precedenti erano emersi nelle fasi iniziali del progetto, quello che segue è arrivato per ultimo, e su un'istanza MariaDB completamente diversa: non più quella del server Koha, ma la sua "cugina" dedicata a Zabbix, isolata per lo stesso principio che separa il monitoraggio dal servizio che sorveglia. Stesso cognome, tutt'altra vicenda.
+
+Durante un test di cambio password sull'utente root, un passaggio saltato (il .my.cnf non aggiornato in coppia con la password nel database) ha lasciato il sistema in uno stato incoerente: né la vecchia password né quella nuova risultavano valide.
+
+```sql
+mysql -u root
+Access denied for user 'root'@'localhost'
+```
+
+Recovery: avviare MariaDB in modalità di emergenza, che bypassa temporaneamente l'autenticazione, per poter reimpostare la password da zero.
+
+```sql
+sudo systemctl stop mariadb
+sudo pkill -9 mariadbd
+sudo mariadbd-safe --skip-grant-tables --skip-networking &
+
+mysql -u root
+
+FLUSH PRIVILEGES;
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'lapassword';
+FLUSH PRIVILEGES;
+
+sudo pkill mariadbd
+sudo systemctl start mariadb
+```
+
+Verificato l'accesso con la nuova password, coerente sia nel database sia in /root/.my.cnf, il servizio è tornato regolare.
