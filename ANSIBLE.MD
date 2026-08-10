@@ -122,7 +122,6 @@ done
 │               └── main.yml
 └── tree.txt
 
-47 directories, 35 files
 ```
 
 
