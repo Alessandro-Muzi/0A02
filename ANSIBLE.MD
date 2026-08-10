@@ -5,6 +5,8 @@ Ogni volta che il playbook viene eseguito, Ansible, via SSH con supporto proxyju
 applica i ruoli assegnati a ciascun gruppo in playbook.yml e, per ognuno, esegue in ordine i task: installazione pacchetti, generazione dei file di configurazione dai template (con le variabili risolte da group_vars),avvio/riavvio dei servizi tramite handler quando necessario.
 Rilanciare il playbook su un'infrastruttura già configurata verifica e corregge eventuali scostamenti dallo stato desiderato, ripristinando la configurazione dei servizi.
 
+---
+
 
 
 
