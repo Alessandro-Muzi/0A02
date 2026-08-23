@@ -1616,7 +1616,7 @@ open /etc/headscale/noise_private.key: read-only file system</span>
   <pre><span class="val">Error: headscale ran into an error and had to shut down: binding to TCP address:
 listen tcp 127.0.0.1:8080: bind: address already in use</span>
 </pre>
-  <p>La porta <code>8080</code> era già occupata da Apache, che su questa stessa macchina serve anche la staff interface di Koha. Il fix ha richiesto di aggiornare la porta di Headscale in <code>group_vars/all/vars.yml</code>, sia in <code>headscale_server_url</code> sia in <code>headscale_listen_port</code>. Quest'ultima variabile, combinata con <code>listen_addr</code> nel template, determina l'indirizzo completo (IP:porta) su cui il servizio ascolta réellement nel <code>config.yaml</code> generato sul server.</p>
+  <p>La porta <code>8080</code> era già occupata da Apache, che su questa stessa macchina serve anche la staff interface di Koha. Il fix ha richiesto di aggiornare la porta di Headscale in <code>group_vars/all/vars.yml</code>, sia in <code>headscale_server_url</code> sia in <code>headscale_listen_port</code>. Quest'ultima variabile, combinata con <code>listen_addr</code> nel template, determina l'indirizzo completo (IP:porta) su cui il servizio ascolta effettivamente nel <code>config.yaml</code> generato sul server.</p>
 
   <h3>/koha-ansible/group_vars/all/vars.yml</h3>
   <pre><span class="key">headscale_server_url:</span> <span class="val">"http://192.168.1.4:8443"</span>
