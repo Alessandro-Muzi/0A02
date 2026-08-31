@@ -3,310 +3,425 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>0A02 — Biblioteca di Alessandro</title>
+<title>0A02 — Biblioteca di Alessandro · Koha su Debian 13 con Ansible</title>
+<meta name="description" content="Documentazione tecnica del deployment automatizzato di Koha ILS su Debian 13: Ansible, MariaDB, OpenLDAP, BIND9, Headscale, Zabbix e nftables.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Source+Serif+4:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-
-
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
   :root {
-    --bg:        #fafaf9;
-    --bg2:       #f2f1ef;
-    --bg3:       #e8e6e2;
-    --border:    #ddd9d3;
-    --text:      #2a2825;
-    --muted:     #928d84;
+    --paper:     #f5f3ee;
+    --paper-2:   #efece5;
+    --paper-3:   #e8e4dd;
+    --ink1:      #edeeeb;
+    --ink:       #0d0d0d;
+    --ink-soft:  #2d2d2d;
+    --muted:     #79736a;
+    --rule:      #d8d3c9;
     --accent:    #8a3324;
-    --accent2:   #4f6f52;
+    --accent-2:  #4f6f52;
     --warn:      #a9762d;
-    --mono:      'JetBrains Mono', monospace;
-    --serif:     'Inter', sans-serif;
-    --sans:      'IBM Plex Sans', sans-serif;
-    --sidebar-w: 300px;
-    --tree-w: 350px;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'Work Sans', system-ui, sans-serif;
+    --nav-col-a: 287px;
+    --nav-col-b: 281px;
+    --sidebar-w: calc(var(--nav-col-a) + var(--nav-col-b) + var(--rail-w));
+    --rail-w: 30px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg2);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    line-height: 1.55;
-    min-height: 100vh;
-    padding-left: calc(var(--tree-w) + var(--sidebar-w));
-
-  }
-
-
- .tree-panel {
-   width: var(--tree-w);
-   position: fixed;
-   top: 0;
-   left: 0;
-   height: 100vh;
-   background: var(--accent);
-   background-image: linear-gradient(to bottom, transparent 97%, var(--accent) 100%),url('albero3.png');
-   background-repeat: no-repeat;
-   background-size: 278px 968px;
-   background-position: 67px top;
-   border-right: none;
-   overflow-y: hidden;
-   padding-top: 60px;
-   padding-right: 12px;
-   padding-bottom: 60px;
-   padding-left: 60px;
-   font-family: var(--mono);
-   font-size: 9.6px;
-   line-height: 1.2;
-   color: var(--muted);
-   z-index: 9;
+  html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;   /* ← aggiungi anche qui */
 }
 
-  /* ── SIDEBAR ─────────────────────────────── */
-  nav {
-    width: var(--sidebar-w);
-    position: fixed;
-    top: 0;
-    left: var(--tree-w);
-    height: 100vh;
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    padding: 28px 0 32px;
-    z-index: 10;
+  body {
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100vh;
+    padding-left: calc(var(--sidebar-w) + var(--rail-w));
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
-  .nav-logo {
+  /* ── RAIL (ex tree-panel) ─────────────────── */
+  .tree-panel {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--rail-w);
+    height: 100vh;
+    background: var(--ink);
+    z-index: 30;
+  }
+  .tree-panel pre { display: none; }
+
+  /* ── TOPBAR ───────────────────────────────── */
+  .topbar {
+    position: fixed;
+    top: 0; left: calc(var(--sidebar-w) + var(--rail-w)); right: 0;
+    height: 160px;
+    display: flex;
+    align-items: left;
+    gap: 0px;
+    padding: 0 48px;
+    padding-left: 60px;
+    background: color-mix(in oklab, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 0px solid var(--rule);
     font-family: var(--serif);
+    font-size: 30px;
+    text-transform: none;
+    color: var(--muted);
+    z-index: 20;
+    flex-direction: column; /* FORZA L'ANDATA A CAPO SOTTO */
+    justify-content: center;
+    line-height: 1.2;
+  
+
+ }
+
+.topbar-title {
+    font-size: 34px;
+    font-weight: bold;
+    letter-spacing: 0px;
+    margin-top: 50px;
+
+}
+
+.topbar-sub {
+    /* opzionale: se vuoi il testo sotto un po' più chiaro o piccolo */
+    font-size: 0.62em; 
+    letter-spacing: 0px
+}
+
+
+
+  /* ── SIDEBAR (menu nello sfondo, centrato) ── */
+  nav {
+    width: calc(var(--nav-col-a) + var(--nav-col-b) + var(--rail-w));
+    position: fixed;
+    top: 0; left: var(--rail-w);
+    height: 100vh;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    z-index: 25;
+  }
+
+.nav-col-a {
+  position: relative;
+  flex: 0 0 var(--nav-col-a);
+  width: var(--nav-col-a);
+  background-image: url('sfondo_sx.png');
+  background-repeat: no-repeat;
+  background-position: 0 center;
+  background-size: cover;
+}
+
+.nav-col-b {
+  flex: 0 0 var(--nav-col-b);
+  width: var(--nav-col-b);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 0;
+  overflow-y: hidden;
+  background-image: url('sfondo_ds.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+}
+
+.nav-rail-border {
+  flex: 0 0 var(--rail-w);
+  width: var(--rail-w);
+  background: var(--ink);
+}
+
+
+
+  .nav-logo {
+    font-family: var(--mono);
     font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+    padding: 0 30px 14px;
+    border-bottom: none;
+    letter-spacing: -.01em;
+    text-align: right;
+  }
+  .nav-logo::before {
+    content: '0A02';
+    display: block;
     font-size: 18px;
-    color: var(--accent);
-    padding: 0 24px 20px;
-    border-bottom: 1px solid var(--border);
-    letter-spacing: .01em;
-    text-align: right; /* Testo a destra */
+    letter-spacing: .04em;
+    color: var(--ink);
   }
   .nav-logo span {
     display: block;
     font-family: var(--mono);
-    font-size: 15px;
-    font-weight: 400;
-    color: var(--muted);
+    font-size: 9px;
+    font-weight: 500;
+    color: #ebeee5;
     text-transform: uppercase;
-    letter-spacing: .12em;
-    margin-top: 50px;
+    letter-spacing: .22em;
+    margin-top: 4px;
   }
 
   .nav-section-label {
     font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: .12em;
+    font-size: 9px;
+    letter-spacing: .2em;
     text-transform: uppercase;
-    color: var(--accent2);
-    padding: 15px 24px 6px;
-    text-align: right; /* Testo a destra */
+    color: #b5b5b5;
+    padding: 14px 30px 4px;
+    text-align: right;
   }
+  .nav-section-label:empty { padding: 6px 0 0; }
 
   nav a {
+    position: relative;
     display: block;
-    padding: 6px 24px;
-    color: var(--text);
+    padding: 3px 30px;
+    color: #edeeeb;
     text-decoration: none;
     font-size: 13px;
-    border-left: 5px solid transparent;
-    transition: all .2s ease;
-    text-align: right;/* Testo a destra */
-
+    line-height: 1.5;
+    font-weight: 400;
+    border-left: none;
+    border-right: 2px solid transparent;
+    transition: color .18s ease, border-color .18s ease, padding .18s ease;
+    text-align: right;
   }
-
-
-
-
   nav a:hover {
-    color: var(--accent);
-    border-left-color: var(--accent);
-    background: rgba(38,203,97,.06);
-  }
-  nav a.active {
-    color: var(--accent);
-    border-left-color: var(--accent);
-    font-weight: 500;
-    background: rgba(138,51,36,.06);
-  }
-
-  .nav-footer {
-    margin-top: auto;
-    padding: 20px 24px 0;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: .04em;
-  }
-
-
-
-  /* ── MAIN ────────────────────────────────── */
-  main {
-  padding-top: 150px;
-  padding-right: 48px;
-  padding-bottom: 100px;
-  padding-left: 48px;
-  max-width: 820px;
-  }
-
-  .page-header {
-    margin-top: 40px;
-    margin-bottom: 34px;
-    padding-bottom: 10px;
-    border-bottom: none;
-  }
-  .page-header h1 {
-    font-family: var(--serif);
-    font-size: 30px;
-    color: var(--text);
-    font-weight: 600;
-    margin-bottom: 5px;
-  }
-  .page-header p { color: var(--muted); font-size: 14px; font-family: var(--serif); font-style: italic; }
-
-  section {
-    scroll-margin-top: 110px; 
-    margin-bottom: 100px; 
-  }
-
-  section h2 {
-    font-family: var(--serif);
-    font-size: 19px;
-    color: var(--accent);
-    font-weight: 600;
-    margin-top: 20px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-section h2.subsection {
-  font-family: var(--serif);
-  font-size: 19px;
-  color: var(--accent);
+  background: color-mix(in oklab, #e2ebcf 60%, transparent);
+  color: var(--ink);
+}
+nav a.active {
+  background: color-mix(in oklab, #6e6e6e 25%, transparent);
+  color: #a6d3d5;
   font-weight: 600;
-  margin-top: 40px;
-  margin-bottom: 16px;
-  display: block;
 }
 
-  section h2::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
+.nav-footer {
+  position: absolute;
+  bottom: 30px;
+  left: 5%;
+  writing-mode: vertical-rl;   /* ruota il flusso del testo in verticale */
+  display: block;
+  transform: translateX(-50%) rotate(180deg); /* rotate(180deg) fa leggere dal basso verso l'alto; rimuovilo se preferisci l'altro verso */
+  padding: 0;                  /* elimina il padding orizzontale pensato per l'uso precedente */
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #edeeeb;
+  letter-spacing: .08em;
+}
+
+  /* ── MAIN ─────────────────────────────────── */
+  main {
+    padding: 100px 40px 120px;
+    max-width: 800px;
+    margin: 0 0 0 25px;
   }
+
+
+  section { scroll-margin-top: 96px; margin-bottom: 96px; }
+  #premessa { 
+       padding-top: 90px;
+       margin-bottom: 96px; }
+
+  section h2 {
+    font-family: var(--sans);
+    font-size: 20px;
+    letter-spacing: -.01em;
+    color: var(--ink);
+    font-weight: 600;
+    margin: 0 0 22px;
+    padding-top: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-top: 30px
+  }
+  section h2::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+  section h2.subsection { display: block; font-size: 17px; margin-top: 52px; color: var(--accent); }
+  section h2.subsection::after { display: none; }
 
   section h3 {
     font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: .06em;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
     text-transform: uppercase;
-    color: var(--muted);
-    margin: 26px 0 10px;
+    color: var(--accent);
+    margin: 60px 0 12px;
   }
 
-  p { margin-bottom: 14px; color: var(--text); font-family: var(--serif); font-size: 13px; }
+  p { margin-bottom: 18px; color: var(--ink-soft); font-family: var(--sans); font-size: 15px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code {
+    font-family: var(--mono);
+    font-size: .87em;
+    background: var(--paper-3);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--accent);
+  }
 
   .callout {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: 3px;
-    padding: 14px 18px;
-    margin-bottom: 20px;
-    font-size: 13px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    border-radius: 0;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 14px;
     font-family: var(--sans);
-    color: var(--text);
+    color: var(--ink-soft);
   }
-  .callout.green { border-left-color: var(--accent2); }
+  .callout.green { border-left-color: var(--accent-2); }
   .callout.yellow { border-left-color: var(--warn); }
 
   pre {
-    background: #f5f4f2;
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 18px 20px;
+    background: var(--ink1);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 20px 22px;
     overflow-x: auto;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     font-family: var(--mono);
-    font-size: 12px;
-    line-height: 1.65;
-    color: var(--text);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: #e6e3dc;
   }
+  pre code { background: none; border: none; color: inherit; padding: 0; }
 
-
-  .comment { color: #a4906e; }
-  .key     { color: var(--accent); }
-  .val     { color: #6b4a2f; }
-  .sec     { color: var(--warn); font-weight: 600; }
-  .ip      { color: #3d6b5c; }
-  .port    { color: #a9762d; }
-  .iface   { color: #a3552e; }
-  .path    { color: #a9762d; }
+  .comment { color: #7e786d; }
+  .key     { color: #b5783c; }
+  .val     { color: #7d8574; }
+  .sec     { color: #d98b6a; font-weight: 600; }
+  .ip      { color: #8fc0a9; }
+  .port    { color: #c7ad60; }
+  .iface   { color: #a47d93; }
+  .path    { color: #c7ad60; }
 
   .topo {
-    background: #f5f4f2;
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 18px 20px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 8px 20px;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 12.5px;
     margin-bottom: 20px;
   }
   .topo-row {
     display: grid;
-    grid-template-columns: 170px 140px 1fr;
+    grid-template-columns: 170px 150px 1fr;
     padding: 6px 0;
-    border-bottom: 1px solid var(--border);
-    gap: 12px;
+    border-bottom: 1px solid var(--rule);
+    gap: 7px;
     align-items: center;
   }
   .topo-row:last-child { border-bottom: none; }
-  .topo-row.header { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .topo-row.header { color: var(--muted); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+
   .badge {
     display: inline-block;
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 10px;
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 2px;
     font-family: var(--mono);
-    background: rgba(138,51,36,.1);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
     color: var(--accent);
-    border: 1px solid rgba(138,51,36,.25);
+    border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
   }
-  .badge.green { background: rgba(79,111,82,.1); color: var(--accent2); border-color: rgba(79,111,82,.25); }
-  .badge.yellow { background: rgba(169,118,45,.1); color: var(--warn); border-color: rgba(169,118,45,.25); }
+  .badge.green { background: color-mix(in oklab, var(--accent-2) 10%, transparent); color: var(--accent-2); border-color: color-mix(in oklab, var(--accent-2) 28%, transparent); }
+  .badge.yellow { background: color-mix(in oklab, var(--warn) 12%, transparent); color: var(--warn); border-color: color-mix(in oklab, var(--warn) 30%, transparent); }
 
-  a.ext { color: var(--accent); text-decoration: none; border-bottom: 1px dashed rgba(138,51,36,.4); }
+  a.ext { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in oklab, var(--accent) 40%, transparent); }
   a.ext:hover { border-bottom-color: var(--accent); }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ul, ol { margin: 0 0 18px 20px; }
+  li { margin-bottom: 6px; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; }
 
 
 
-#premessa {
-  margin-bottom: 300px;
+
+
+@media (max-width: 980px) {
+  body { padding-left: 0; }
+  .tree-panel { display: none; }
+  nav { display: none; }
+
+.mobile-footer {
+    display: block;
+    text-align: center;
+    padding: 24px 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .08em;
+  }
+
+  .topbar {
+    position: static;
+    left: 0;
+    padding-left: 20px !important;
+    margin-left: 0 !important;
+  }
+  main {
+    padding: 40px 20px 90px;
+    margin-left: 0 !important;
+  }
+
+  .topo-row {
+    display: block !important;
+    padding: 12px 0;
+  }
+  .topo-row > * {
+    display: block;
+    padding: 2px 0;
+  }
+  .topo-row.header {
+    display: none !important;
+  }
 }
+
+
+
+main [id] {
+  scroll-margin-top: 180px;
+}
+
+
+.callout, .topo, pre {
+  color: #333333; /* Metti qui il colore chiaro che desideri per il testo/codice */
+}
+.callout h1, .callout h2, .callout h3, .callout h4,
+.topo h1, .topo h2, .topo h3, .topo h4,
+pre h1, pre h2, pre h3, pre h4 {
+  color: var(--ink) !important; /* Restituisce il colore originale solo ai titoli */
+}
+
 </style>
 </head>
 <body>
 
 
-<div style="position: fixed; top: 0; left: 0; right: 0; height: 44px; background: #2e3a29; color: #fff; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; z-index: 20;">
-  0A02 · Biblioteca di Alessandro
+<div class="topbar">
+    <span class="topbar-title">0A02 — Biblioteca di Alessandro</span>
+    <span class="topbar-sub">Deployment automatizzato di Koha ILS · Ansible · Debian 13</span>
 </div>
 
 
@@ -315,43 +430,37 @@ section h2.subsection {
 
 
 <nav>
-  <div class="nav-logo"><span>NAVIGAZIONE</span></div>
-
-  <div class="nav-section-label"></div>
-  <a href="#premessa" >Introduzione</a>
-
-  <div class="nav-section-label">Infrastruttura</div>
-  <a href="#topologia">Topologia</a>
-  <a href="#ansible">Ansible &amp; architettura</a>
-  <a href="#nftables">Rete &amp; nftables</a>
-
-  <div class="nav-section-label">Servizi</div>
-  <a href="#mariadb">MariaDB</a>
-  <a href="#koha">Koha</a>
-  <a href="#openldap">OpenLDAP</a>
-  <a href="#bind9">BIND9</a>
-  <a href="#headscale">Headscale</a>
-  <a href="#zabbix">Zabbix</a>
-
-  <div class="nav-section-label">Troubleshooting</div>
-  <a href="#ts-mariadb">MariaDB — autenticazione</a>
-  <a href="#ts-ldap">Mapping LDAP — attributo "is"</a>
-  <a href="#ts-headscale">Headscale — porta &amp; permessi</a>
-  <a href="#ts-proxyjump">WSL, routing &amp; ProxyJump</a>
-  
-
-  <span class="nav-footer">© 2026 Alessandro Muzi</span>
+ <div class="nav-col-a">
+ <span class="nav-footer">© 2026 Alessandro Muzi</span>
+ </div>
+  <div class="nav-col-b">
+    <div class="nav-logo"><span>NAVIGAZIONE</span></div>
+    <div class="nav-section-label"></div>
+    <a href="#premessa">Introduzione</a>
+    <div class="nav-section-label">Infrastruttura</div>
+    <a href="#topologia">Topologia</a>
+    <a href="#ansible">Ansible &amp; architettura</a>
+    <a href="#nftables">Rete &amp; nftables</a>
+    <div class="nav-section-label">Servizi</div>
+    <a href="#mariadb">MariaDB</a>
+    <a href="#koha">Koha</a>
+    <a href="#openldap">OpenLDAP</a>
+    <a href="#bind9">BIND9</a>
+    <a href="#headscale">Headscale</a>
+    <a href="#zabbix">Zabbix</a>
+    <div class="nav-section-label">Troubleshooting</div>
+    <a href="#ts-mariadb">MariaDB — autenticazione</a>
+    <a href="#ts-ldap">Mapping LDAP — attributo "is"</a>
+    <a href="#ts-headscale">Headscale — porta &amp; permessi</a>
+    <a href="#ts-proxyjump">WSL, routing &amp; ProxyJump</a>
+    </div>
+  <div class="nav-rail-border"></div>   <!-- ← ora qui, fuori da nav-col-b -->
 </nav>
 
 <main>
 <section id="premessa">
-  <div class="page-header">
-   <h1>0A02 — Biblioteca di Alessandro</h1>
-    <p>Deployment automatizzato di Koha ILS · Ansible · Debian 13</p>
-  </div>
 
- 
-    <h2>Introduzione</h2>
+   <h2>Introduzione</h2>
     <p>Mi interessava provare un gestionale per biblioteche, così dopo una rapida ricerca ho scoperto Koha: oltre a essere open source, è l'Integrated Library System più diffuso al mondo, con un ecosistema particolarmente ricco e attivo. 
      Ho maturato un interesse specifico per questo prodotto, ed è la ragione per cui l'ho scelto come cuore di questo progetto. </p> 
 
@@ -399,7 +508,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
 <section id="ansible">
   <h2>Ansible</h2>
 
-  <p>Ogni volta che il playbook viene eseguito, Ansible, via SSH con supporto ProxyJump per la rete dedicata a Zabbix, applica i ruoli assegnati a ciascun gruppo in <code>playbook.yml</code> e, per ognuno, esegue in ordine i task: installazione pacchetti, generazione dei file di configurazione dai template (con le variabili risolte da <code>group_vars</code>), avvio/riavvio dei servizi tramite handler quando necessario. Rilanciare il playbook su un'infrastruttura già configurata verifica e corregge eventuali scostamenti dallo stato desiderato, ripristinando la configurazione dei servizi.</p>
+  <p>Ogni volta che il playbook viene eseguito, Ansible, via SSH con supporto ProxyJump per la rete dedicata a Zabbix, applica i ruoli assegnati a ciascun gruppo in <strong>playbook.yml</strong> e, per ognuno, esegue in ordine i task: installazione pacchetti, generazione dei file di configurazione dai template (con le variabili risolte da <strong>group_vars</strong>), avvio/riavvio dei servizi tramite handler quando necessario. Rilanciare il playbook su un'infrastruttura già configurata verifica e corregge eventuali scostamenti dallo stato desiderato, ripristinando la configurazione dei servizi.</p>
 
   <h3>Creazione della struttura</h3>
   <pre><span class="val">mkdir -p koha-ansible/{group_vars/all,roles/{bind9/{defaults,files,handlers,tasks,templates},headscale/{defaults,files,handlers,tasks,templates},headscale-client/{defaults,handlers,tasks},koha/{defaults,files,handlers,tasks,templates},mariadb/{defaults,files,handlers,tasks,templates},nftables/{defaults,handlers,tasks,templates},openldap/{defaults,files,tasks,templates},zabbix-server/{defaults,handlers,tasks}}}</span>
@@ -565,7 +674,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
 <span class="key">headscale_version:</span> <span class="val">"0.29.2"</span>
 </pre>
 
-  <p><span class="path">group_vars/all/</span> contiene le variabili condivise da tutti gli host: <code>vars.yml</code> per la configurazione in chiaro, <code>vault.yml</code> per i secret (password database, preauth key Headscale), cifrato tramite Ansible Vault e sicuro anche se pubblicato nel repository.</p>
+  <p><span class="path">group_vars/all/</span> contiene le variabili condivise da tutti gli host: <strong>vars.yml</strong> per la configurazione in chiaro, <strong>vault.yml</strong> per i secret (password database, preauth key Headscale), cifrato tramite Ansible Vault e sicuro anche se pubblicato nel repository.</p>
 </section>
 
 
@@ -716,7 +825,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
 </pre>
 
   <div class="callout">
-    <strong>Nota:</strong> Il task di copia del template usa la direttiva <code>notify</code> per innescare l'handler di riavvio del servizio <code>mariadb</code> solo in caso di modifiche al file di configurazione <code>koha.cnf</code>.
+    <strong>Nota:</strong> Il task di copia del template usa la direttiva <strong>notify</strong> per innescare l'handler di riavvio del servizio <strong>mariadb</strong> solo in caso di modifiche al file di configurazione <strong>koha.cnf</strong>.
   </div>
 </section>
 
@@ -829,7 +938,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
 </pre>
 
   <div class="callout">
-    <strong>Nota:</strong> L'attributo <code>is=</code> mappa i campi del form Koha agli attributi LDAP corrispondenti. I valori statici (come <code>MAIN</code> e <code>PT</code>) vengono usati di default se l'attributo LDAP non esiste.
+    <strong>Nota:</strong> L'attributo <strong>is=</strong> mappa i campi del form Koha agli attributi LDAP corrispondenti. I valori statici (come <strong>MAIN</strong> e <strong>PT</strong>) vengono usati di default se l'attributo LDAP non esiste.
   </div>
 </section>
 
@@ -908,7 +1017,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
 </pre>
 
   <div class="callout">
-    <strong>Nota:</strong> I file LDIF temporanei vengono creati con permessi ristretti (<code>0600</code>) per motivi di sicurezza, poiché contengono la password amministratore. La gestione dei risultati usa <code>failed_when</code> e <code>changed_when</code> per ignorare l'errore "Already exists" — la struttura potrebbe già essere presente da precedenti esecuzioni.
+    <strong>Nota:</strong> I file LDIF temporanei vengono creati con permessi ristretti (<strong>0600</strong>) per motivi di sicurezza, poiché contengono la password amministratore. La gestione dei risultati usa <strong>failed_when</strong> e <strong>changed_when</strong> per ignorare l'errore "Already exists" — la struttura potrebbe già essere presente da precedenti esecuzioni.
   </div>
 </section>
 
@@ -1246,7 +1355,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
 </pre>
 
   <div class="callout">
-    <strong>Nota:</strong> La preauth key è memorizzata in vault e permette ai client di unirsi automaticamente alla tailnet Headscale senza intervento manuale. Il file <code>config.yaml.j2</code> richiede <code>ProtectSystem=strict</code> nel systemd unit, quindi i dati vanno in <code>/var/lib</code>, non in <code>/etc</code>.
+    <strong>Nota:</strong> La preauth key è memorizzata in vault e permette ai client di unirsi automaticamente alla tailnet Headscale senza intervento manuale. Il file <strong>config.yaml.j2</strong> richiede <strong>ProtectSystem=strict</strong> nel systemd unit, quindi i dati vanno in <strong>/var/lib</strong>, non in <strong>/etc</strong>.
   </div>
 </section>
 
@@ -1397,7 +1506,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
 </pre>
 
   <div class="callout">
-    <strong>Nota:</strong> Lo schema SQL viene importato solo al primo run (controllo sulla presenza della tabella <code>users</code>). La password di default <code>"lapassword"</code> deve essere sostituita con un valore casuale memorizzato in vault. Frontend raggiungibile via Apache dopo il riavvio.
+    <strong>Nota:</strong> Lo schema SQL viene importato solo al primo run (controllo sulla presenza della tabella <strong>users</strong>). La password di default <strong>"lapassword"</strong> deve essere sostituita con un valore casuale memorizzato in vault. Frontend raggiungibile via Apache dopo il riavvio.
   </div>
 </section>
 
@@ -1411,7 +1520,7 @@ e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio
   <pre><span class="comment">fatal: [SERVER]: FAILED! => {"changed": false, "msg": "unable to find /root/.my.cnf.
 Exception message: (1698, \"Access denied for user 'root'@'localhost'\")"}</span>
 </pre>
-  <p>Il modulo Ansible non riusciva a connettersi come utente <code>root</code> su <code>localhost</code>: sulle versioni recenti di MariaDB, l'utente root usa di default il plugin <code>unix_socket</code> (autenticazione basata sull'utente di sistema, non su password), che non è compatibile con l'autenticazione via <code>.my.cnf</code> che Ansible si aspetta.</p>
+  <p>Il modulo Ansible non riusciva a connettersi come utente <strong>root</strong> su <strong>localhost</strong>: sulle versioni recenti di MariaDB, l'utente root usa di default il plugin <strong>unix_socket</strong> (autenticazione basata sull'utente di sistema, non su password), che non è compatibile con l'autenticazione via <strong>.my.cnf</strong> che Ansible si aspetta.</p>
   <p>Fix: impostare esplicitamente una password per root, e creare il file di credenziali che Ansible legge automaticamente.</p>
   <pre><span class="key">ALTER USER</span> <span class="val">'root'@'localhost'</span> <span class="key">IDENTIFIED BY</span> <span class="val">'lapassword'</span>;
 <span class="key">FLUSH PRIVILEGES</span>;
@@ -1427,18 +1536,18 @@ Exception message: (1698, \"Access denied for user 'root'@'localhost'\")"}</span
 </pre>
 
   <h3>Nota tecnica: IDENTIFIED BY vs IDENTIFIED VIA</h3>
-  <p>Il comando <code>ALTER USER</code>/<code>CREATE USER</code> permette di specificare il metodo di autenticazione in due modi diversi:</p>
-  <p><code>IDENTIFIED BY 'stringa'</code>: password classica; il server la cifra con l'algoritmo predefinito per connessioni standard.</p>
-  <p><code>IDENTIFIED VIA plugin</code>: delega il login a un modulo esterno. I casi più comuni sono <code>unix_socket</code> (autenticazione basata sull'utente Linux di sistema, senza password) o <code>gssapi</code>/<code>pam</code> (integrazione con domini aziendali).</p>
-  <p>Confondere i due, provando a combinarli, o usando <code>VIA</code> quando serve semplicemente <code>BY</code>, è la causa più comune di errori di sintassi quando si configura root da zero.</p>
+  <p>Il comando <strong>ALTER USER</strong>/<strong>CREATE USER</strong> permette di specificare il metodo di autenticazione in due modi diversi:</p>
+  <p><strong>IDENTIFIED BY 'stringa'</strong>: password classica; il server la cifra con l'algoritmo predefinito per connessioni standard.</p>
+  <p><strong>IDENTIFIED VIA plugin</strong>: delega il login a un modulo esterno. I casi più comuni sono <strong>unix_socket</strong> (autenticazione basata sull'utente Linux di sistema, senza password) o <strong>gssapi</strong>/<strong>pam</strong> (integrazione con domini aziendali).</p>
+  <p>Confondere i due, provando a combinarli, o usando <strong>VIA</strong> quando serve semplicemente <strong>BY</strong>, è la causa più comune di errori di sintassi quando si configura root da zero.</p>
 
   <h3>Repository Tailscale: chiave GPG non gestibile</h3>
   <pre><span class="comment">[ERROR]: Module failed: Either apt-key or gpg binary is required, but neither could
 be found. The apt-key CLI has been deprecated and removed in modern Debian and
 derivatives, you might want to use "deb822_repository" instead.</span>
 </pre>
-  <p>Il modulo per aggiungere il repository APT di Tailscale richiedeva <code>apt-key</code> o <code>gpg</code>, entrambi assenti sul sistema; <code>apt-key</code> è deprecato e rimosso nelle versioni moderne di Debian.</p>
-  <p>Fix: installare <code>gnupg</code> come dipendenza preliminare del ruolo.</p>
+  <p>Il modulo per aggiungere il repository APT di Tailscale richiedeva <strong>apt-key</strong> o <strong>gpg</strong>, entrambi assenti sul sistema; <strong>apt-key</strong> è deprecato e rimosso nelle versioni moderne di Debian.</p>
+  <p>Fix: installare <strong>gnupg</strong> come dipendenza preliminare del ruolo.</p>
   <pre><span class="val">sudo apt update && sudo apt install -y gnupg</span>
 </pre>
 
@@ -1447,8 +1556,8 @@ derivatives, you might want to use "deb822_repository" instead.</span>
 </pre>
   <pre><span class="comment">Koha requires mod_cgi to be enabled within Apache in order to run.</span>
 </pre>
-  <p><code>koha-create</code> richiede alcuni moduli Apache non abilitati di default su un'installazione pulita — prima <code>mod_rewrite</code>, poi, al tentativo successivo, <code>mod_cgi</code>.</p>
-  <p>Fix: task dedicati con <code>community.general.apache2_module</code>, aggiunti in <span class="path">roles/koha/tasks/instance.yml</span> prima della creazione dell'istanza, così le dipendenze sono garantite ad ogni run.</p>
+  <p><strong>koha-create</strong> richiede alcuni moduli Apache non abilitati di default su un'installazione pulita — prima <strong>mod_rewrite</strong>, poi, al tentativo successivo, <strong>mod_cgi</strong>.</p>
+  <p>Fix: task dedicati con <strong>community.general.apache2_module</strong>, aggiunti in <span class="path">roles/koha/tasks/instance.yml</span> prima della creazione dell'istanza, così le dipendenze sono garantite ad ogni run.</p>
   <pre><span class="comment">- name: Abilitare il modulo rewrite di Apache</span>
   <span class="key">community.general.apache2_module:</span>
     <span class="key">name:</span> <span class="val">rewrite</span>
@@ -1464,7 +1573,7 @@ derivatives, you might want to use "deb822_repository" instead.</span>
 
   <h3>L'ultimo imprevisto: un'altra MariaDB, un'altra storia</h3>
   <p>Se i problemi precedenti erano emersi nelle fasi iniziali del progetto, quello che segue è arrivato per ultimo, e su un'istanza MariaDB completamente diversa: non più quella del server Koha, ma la sua "cugina" dedicata a Zabbix, isolata per lo stesso principio che separa il monitoraggio dal servizio che sorveglia. Stesso cognome, tutt'altra vicenda.</p>
-  <p>Durante un test di cambio password sull'utente <code>root</code>, un passaggio saltato (il <span class="path">.my.cnf</span> non aggiornato in coppia con la password nel database) ha lasciato il sistema in uno stato incoerente: né la vecchia password né quella nuova risultavano valide.</p>
+  <p>Durante un test di cambio password sull'utente <strong>root</strong>, un passaggio saltato (il <span class="path">.my.cnf</span> non aggiornato in coppia con la password nel database) ha lasciato il sistema in uno stato incoerente: né la vecchia password né quella nuova risultavano valide.</p>
   <pre><span class="val">mysql -u root</span>
 <span class="comment">Access denied for user 'root'@'localhost'</span>
 </pre>
@@ -1499,7 +1608,7 @@ derivatives, you might want to use "deb822_repository" instead.</span>
   <h2>Troubleshooting — Mapping LDAP — attributo "is"</h2>
   
   <h3>Sintomo</h3>
-  <p>Dopo aver configurato l'autenticazione LDAP in <code>koha-conf.xml</code>, il login all'interfaccia staff di Koha restituiva un Errore 500 generico. Nulla di utile nella pagina d'errore — la causa reale era solo nei log Apache:</p>
+  <p>Dopo aver configurato l'autenticazione LDAP in <strong>koha-conf.xml</strong>, il login all'interfaccia staff di Koha restituiva un Errore 500 generico. Nulla di utile nella pagina d'errore — la causa reale era solo nei log Apache:</p>
 
   <pre><span class="key">tail</span> -n 20 <span class="path">/var/log/koha/biblioteca/intranet-error.log</span>
 
@@ -1519,14 +1628,14 @@ while "strict refs" in use at /usr/share/koha/lib/C4/Auth_with_ldap.pm line 65</
 <span class="key">&lt;/mapping&gt;</span>
 </pre>
 
-  <p>L'attributo <code>field=</code> sembrava ragionevole (è il nome più intuitivo), ma non trovava riscontro nel codice. Un primo tentativo di correzione con <code>is_key="0"</code> ha solo spostato il problema: l'errore 500 è sparito, ma è comparso un nuovo errore:</p>
+  <p>L'attributo <strong>field=</strong> sembrava ragionevole (è il nome più intuitivo), ma non trovava riscontro nel codice. Un primo tentativo di correzione con <strong>is_key="0"</strong> ha solo spostato il problema: l'errore 500 è sparito, ma è comparso un nuovo errore:</p>
 
   <pre><span class="val">No ldapserver "mapping for 'userid'" defined in KOHA_CONF
 at Auth_with_ldap.pm line 97</span>
 </pre>
 
   <h3>La causa reale</h3>
-  <p>Leggendo direttamente il sorgente Perl (<code>Auth_with_ldap.pm</code>), il codice cerca esplicitamente la chiave <code>is</code>, non <code>field</code> né <code>is_key</code>:</p>
+  <p>Leggendo direttamente il sorgente Perl (<strong>Auth_with_ldap.pm</strong>), il codice cerca esplicitamente la chiave <strong>is</strong>, non <strong>field</strong> né <strong>is_key</strong>:</p>
 
   <pre><span class="key">my</span> <span class="val">$uid_field</span> = <span class="val">$mapping</span>{<span class="sec">userid</span>}-&gt;{<span class="sec">is</span>}
     <span class="key">or die</span> <span class="val">ldapserver_error</span>(<span class="val">"mapping for 'userid'"</span>);
@@ -1539,10 +1648,10 @@ at Auth_with_ldap.pm line 97</span>
 <span class="key">&lt;categorycode</span> <span class="sec">is</span>=<span class="val">"employeetype"</span>  <span class="key">&gt;</span>PT<span class="key">&lt;/categorycode&gt;</span>
 </pre>
 
-  <p>Il nome dell'elemento XML è il campo Koha (es. <code>branchcode</code>), l'attributo <code>is</code> indica l'attributo LDAP corrispondente, e il testo tra i tag (se presente) è il valore di default statico usato quando LDAP non restituisce nulla per quel campo.</p>
+  <p>Il nome dell'elemento XML è il campo Koha (es. <strong>branchcode</strong>), l'attributo <strong>is</strong> indica l'attributo LDAP corrispondente, e il testo tra i tag (se presente) è il valore di default statico usato quando LDAP non restituisce nulla per quel campo.</p>
 
   <h3>Il fix</h3>
-  <p>Riscritto l'intero blocco <code>&lt;mapping&gt;</code> con la sintassi corretta, e integrato nel ruolo Ansible con <code>blockinfile</code> per restare gestito automaticamente ad ogni run:</p>
+  <p>Riscritto l'intero blocco <strong>&lt;mapping&gt;</strong> con la sintassi corretta, e integrato nel ruolo Ansible con <strong>blockinfile</strong> per restare gestito automaticamente ad ogni run:</p>
 
   <pre><span class="comment">- name: Configurare l'autenticazione OpenLDAP in koha-conf.xml</span>
   <span class="key">ansible.builtin.blockinfile:</span>
@@ -1574,7 +1683,7 @@ at Auth_with_ldap.pm line 97</span>
 </pre>
 
   <div class="callout green">
-    <strong>Conclusione:</strong> Il nome più "intuitivo" per un attributo di configurazione (<code>field=</code>) non è sempre quello corretto: quando la documentazione ufficiale scarseggia o è ambigua, il sorgente del software resta la fonte di verità più affidabile — in questo caso, letteralmente commentato nel codice stesso.
+    <strong>Conclusione:</strong> Il nome più "intuitivo" per un attributo di configurazione (<strong>field=</strong>) non è sempre quello corretto: quando la documentazione ufficiale scarseggia o è ambigua, il sorgente del software resta la fonte di verità più affidabile — in questo caso, letteralmente commentato nel codice stesso.
   </div>
 </section>
 
@@ -1586,26 +1695,26 @@ at Auth_with_ldap.pm line 97</span>
 <section id="ts-headscale">
   <h2>Troubleshooting — Headscale — porta &amp; permessi</h2>
   <p>Prima di arrivare a Headscale, il primo tentativo di VPN mesh per questo progetto era stato Tailscale nella sua forma originale (coordination server cloud ufficiale). La scelta è poi ricaduta su Headscale, l'implementazione open source e self-hosted dello stesso protocollo, per restare coerente con l'approccio self-hosted del resto dell'infrastruttura, senza dipendenze da un coordination server di terzi.</p>
-  <p>Il primo avvio del servizio non è stato indolore: tre problemi distinti, ciascuno diagnosticato con <code>journalctl</code> prima di trovare il fix.</p>
+  <p>Il primo avvio del servizio non è stato indolore: tre problemi distinti, ciascuno diagnosticato con <strong>journalctl</strong> prima di trovare il fix.</p>
 
   <h3>1. Variabile di versione non definita</h3>
   <pre><span class="val">Error while resolving value for 'dest': 'headscale_version' is undefined</span>
 </pre>
-  <p>Il ruolo Ansible richiede esplicitamente la versione di Headscale da scaricare, senza un valore di default preimpostato — una scelta voluta, per evitare di installare silenziosamente una versione obsoleta. Verificata su GitHub l'ultima release stabile, il fix è stata una semplice aggiunta in <code>group_vars/all.yml</code>:</p>
+  <p>Il ruolo Ansible richiede esplicitamente la versione di Headscale da scaricare, senza un valore di default preimpostato — una scelta voluta, per evitare di installare silenziosamente una versione obsoleta. Verificata su GitHub l'ultima release stabile, il fix è stata una semplice aggiunta in <strong>group_vars/all.yml</strong>:</p>
   <pre><span class="key">headscale_version:</span> <span class="val">"0.29.2"</span>
 </pre>
 
   <h3>2. Chiave privata su filesystem in sola lettura</h3>
-  <p>Il servizio partiva e moriva subito, in loop di restart. <code>journalctl -u headscale</code> ha rivelato la causa:</p>
+  <p>Il servizio partiva e moriva subito, in loop di restart. <strong>journalctl -u headscale</strong> ha rivelato la causa:</p>
   <pre><span class="val">Error: initializing: creating new headscale: reading or creating Noise protocol
 private key: saving private key to disk at path "/etc/headscale/noise_private.key":
 open /etc/headscale/noise_private.key: read-only file system</span>
 </pre>
-  <p>Il file <code>.service</code> del pacchetto Debian applica hardening di sicurezza con <code>ProtectSystem=strict</code>, che rende <code>/etc</code> di sola lettura per il processo. Il file stesso prevedeva già la soluzione, ma commentata di default:</p>
+  <p>Il file <strong>.service</strong> del pacchetto Debian applica hardening di sicurezza con <strong>ProtectSystem=strict</strong>, che rende <strong>/etc</strong> di sola lettura per il processo. Il file stesso prevedeva già la soluzione, ma commentata di default:</p>
   <pre><span class="comment"># WorkingDirectory=/var/lib/headscale</span>
 <span class="comment"># ReadWritePaths=/var/lib/headscale</span>
 </pre>
-  <p>Invece di forzare un override systemd, la scelta è stata allinearsi al comportamento già previsto dal pacchetto: spostare il path delle chiavi da <code>/etc/headscale</code> a <code>/var/lib/headscale</code> direttamente nel template <code>config.yaml.j2</code> — coerente con la distinzione tra configurazione statica (<code>/etc</code>) e dati generati a runtime (<code>/var/lib</code>).</p>
+  <p>Invece di forzare un override systemd, la scelta è stata allinearsi al comportamento già previsto dal pacchetto: spostare il path delle chiavi da <strong>/etc/headscale</strong> a <strong>/var/lib/headscale</strong> direttamente nel template <strong>config.yaml.j2</strong> — coerente con la distinzione tra configurazione statica (<strong>/etc</strong>) e dati generati a runtime (<strong>/var/lib</strong>).</p>
   <pre><span class="key">private_key_path:</span> <span class="path">{{ headscale_data_dir }}/private.key</span>
 <span class="key">noise:</span>
   <span class="key">private_key_path:</span> <span class="path">{{ headscale_data_dir }}/noise_private.key</span>
@@ -1616,7 +1725,7 @@ open /etc/headscale/noise_private.key: read-only file system</span>
   <pre><span class="val">Error: headscale ran into an error and had to shut down: binding to TCP address:
 listen tcp 127.0.0.1:8080: bind: address already in use</span>
 </pre>
-  <p>La porta <code>8080</code> era già occupata da Apache, che su questa stessa macchina serve anche la staff interface di Koha. Il fix ha richiesto di aggiornare la porta di Headscale in <code>group_vars/all/vars.yml</code>, sia in <code>headscale_server_url</code> sia in <code>headscale_listen_port</code>. Quest'ultima variabile, combinata con <code>listen_addr</code> nel template, determina l'indirizzo completo (IP:porta) su cui il servizio ascolta effettivamente nel <code>config.yaml</code> generato sul server.</p>
+  <p>La porta <strong>8080</strong> era già occupata da Apache, che su questa stessa macchina serve anche la staff interface di Koha. Il fix ha richiesto di aggiornare la porta di Headscale in <strong>group_vars/all/vars.yml</strong>, sia in <strong>headscale_server_url</strong> sia in <strong>headscale_listen_port</strong>. Quest'ultima variabile, combinata con <strong>listen_addr</strong> nel template, determina l'indirizzo completo (IP:porta) su cui il servizio ascolta réellement nel <strong>config.yaml</strong> generato sul server.</p>
 
   <h3>/koha-ansible/group_vars/all/vars.yml</h3>
   <pre><span class="key">headscale_server_url:</span> <span class="val">"http://192.168.1.4:8443"</span>
@@ -1643,7 +1752,7 @@ listen tcp 127.0.0.1:8080: bind: address already in use</span>
 
   <h3>Sintomo</h3>
   <p>Con la VM Zabbix collegata alla nuova rete interna LAN03, il primo ostacolo non è arrivato dal ruolo Ansible, ma da qualcosa di più a monte: il control node stesso.</p>
-  <p><code>ansible-playbook</code> falliva sull'host Zabbix con un timeout SSH:</p>
+  <p><strong>ansible-playbook</strong> falliva sull'host Zabbix con un timeout SSH:</p>
   <pre><span class="comment">Data could not be sent to remote host "10.0.0.20". Make sure this host can be
 reached over ssh: ssh: connect to host </span><span class="ip">10.0.0.20</span><span class="comment"> port </span><span class="port">22</span><span class="comment"> Connection timed out</span>
 </pre>
@@ -1688,7 +1797,7 @@ reached over ssh: ssh: connect to host </span><span class="ip">10.0.0.20</span><
   <p>Il primo tentativo di autenticazione con password, attraverso il ProxyJump, veniva comunque rifiutato:</p>
   <pre><span class="comment">Permission denied (publickey,password)</span>
 </pre>
-  <p>La causa: <span class="path">/etc/ssh/sshd_config</span> sulla VM Zabbix aveva <code>PermitRootLogin prohibit-password</code> — root può accedere solo con chiave SSH, mai con password, indipendentemente da quanto questa sia corretta. La chiave pubblica è stata quindi copiata manualmente in <span class="path">/root/.ssh/authorized_keys</span> sulla VM, passando dal server già raggiungibile:</p>
+  <p>La causa: <span class="path">/etc/ssh/sshd_config</span> sulla VM Zabbix aveva <strong>PermitRootLogin prohibit-password</strong> — root può accedere solo con chiave SSH, mai con password, indipendentemente da quanto questa sia corretta. La chiave pubblica è stata quindi copiata manualmente in <span class="path">/root/.ssh/authorized_keys</span> sulla VM, passando dal server già raggiungibile:</p>
   <pre><span class="val">ssh root@</span><span class="ip">10.0.0.20</span><span class="val"> "mkdir -p /root/.ssh && echo 'ssh-ed25519 AAAA...' >> /root/.ssh/authorized_keys && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"</span>
 </pre>
   <p>Da quel momento, l'autenticazione via ProxyJump è passata a chiave, e il playbook ha raggiunto ZABBIX senza ulteriori intoppi.</p>
@@ -1699,27 +1808,88 @@ reached over ssh: ssh: connect to host </span><span class="ip">10.0.0.20</span><
   <pre><span class="comment">Received error: fetch control key: Get "http://</span><span class="ip">192.168.1.4</span><span class="comment">:</span><span class="port">8443</span><span class="comment">/key?v=138":
 dial tcp </span><span class="ip">192.168.1.4</span><span class="comment">:</span><span class="port">8443</span><span class="comment">: connect: connection timed out</span>
 </pre>
-  <p>Prima ipotesi verificata (e confermata, ma non sufficiente da sola): Headscale ascoltava solo su <span class="ip">127.0.0.1</span><span class="port">:8443</span>, non raggiungibile da altre macchine. Corretto il <code>listen_addr</code> a <span class="ip">0.0.0.0</span><span class="port">:8443</span> nel template, il problema persisteva comunque — mancava ancora una regola nella chain input del gateway (non forward, perché il traffico è diretto al servizio in esecuzione sul gateway stesso, non lo attraversa per raggiungere un'altra macchina):</p>
+  <p>Prima ipotesi verificata (e confermata, ma non sufficiente da sola): Headscale ascoltava solo su <span class="ip">127.0.0.1</span><span class="port">:8443</span>, non raggiungibile da altre macchine. Corretto il <strong>listen_addr</strong> a <span class="ip">0.0.0.0</span><span class="port">:8443</span> nel template, il problema persisteva comunque — mancava ancora una regola nella chain input del gateway (non forward, perché il traffico è diretto al servizio in esecuzione sul gateway stesso, non lo attraversa per raggiungere un'altra macchina):</p>
   <pre><span class="key">tcp</span> <span class="key">dport</span> <span class="port">8443</span> <span class="val">accept</span>
 </pre>
   <p>Koha (porta 8080): stesso pattern, un giorno dopo. Da WSL il ping verso il server funzionava, ma curl andava in timeout dopo lunga attesa:</p>
   <pre><span class="comment">curl: (28) Failed to connect to </span><span class="ip">192.168.1.4</span><span class="comment"> port </span><span class="port">8080</span><span class="comment"> after 21004 ms</span>
 </pre>
-  <p>Apache era correttamente in ascolto su <span class="val">*</span><span class="port">:8080</span> (verificato con <code>ss -tlnp</code>), e rispondeva regolarmente quando interrogato localmente dal server stesso. Anche qui, la causa era la stessa: mancava la regola input dedicata alla porta 8080.</p>
+  <p>Apache era correttamente in ascolto su <span class="val">*</span><span class="port">:8080</span> (verificato con <strong>ss -tlnp</strong>), e rispondeva regolarmente quando interrogato localmente dal server stesso. Anche qui, la causa era la stessa: mancava la regola input dedicata alla porta 8080.</p>
 
-  <h3>Conclusione</h3>
+
+<div class="callout green">
+  <strong>Conclusione:</strong>
   <p>Il sintomo iniziale (timeout SSH, poi timeout HTTP) suggeriva ogni volta un problema di firewall — ed era vero, ma non nel punto in cui si guardava per primo. Vale la pena distinguere sempre le due chain: <strong>forward</strong> per il traffico che il gateway deve instradare verso un'altra macchina, <strong>input</strong> per il traffico diretto al gateway stesso. Un servizio che gira sul gateway (come Headscale o, più in generale, qualsiasi demone in ascolto su quella macchina) richiede sempre una regola input dedicata — indipendentemente da quanto sia permissiva la chain forward, che governa tutt'altro traffico.</p>
+</div>
 </section>
 
 
 
 
 
+<footer class="mobile-footer">© 2026 Alessandro Muzi</footer>
 
 
 
 
 </main>
 
+
+
+
+
+<script>
+  const links = [...document.querySelectorAll('nav a[href^="#"]')];
+  
+  // Prende esattamente gli ID collegati al menu
+  const sections = links.map(a => {
+    const id = a.getAttribute('href').slice(1);
+    return document.getElementById(id);
+  }).filter(Boolean);
+
+  let current = null;
+
+  function sync() {
+    let active = sections[0];
+
+    // Guarda la posizione reale dell'elemento sullo schermo
+    for (const s of sections) { 
+      // 200px è la nostra linea magica (i 180px del CSS + 20px di tolleranza)
+      if (s.getBoundingClientRect().top <= 200) { 
+        active = s; 
+      } else { 
+        break; 
+      }
+    }
+
+    // Se l'utente è arrivato in fondo alla pagina, forza l'ultima voce
+    if (Math.ceil(window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 2) {
+      active = sections[sections.length - 1];
+    }
+
+    if (!active || active === current) return;
+    current = active;
+
+    // Spegni tutto e accendi solo la voce corretta
+    links.forEach(a => a.classList.remove('active'));
+    const activeLink = links.find(a => a.getAttribute('href') === '#' + active.id);
+    if (activeLink) activeLink.classList.add('active');
+  }
+
+  let ticking = false;
+  function onScroll() {
+    if (!ticking) {
+      requestAnimationFrame(() => { 
+        sync(); 
+        ticking = false; 
+      });
+      ticking = true;
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', sync);
+  sync();
+</script>
 </body>
 </html>
