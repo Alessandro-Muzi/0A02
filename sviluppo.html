@@ -846,6 +846,24 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     line-height: 1.2;
   }
 }
+@media (max-width: 700px) {
+  :root {
+    --content-offset: 34px;  /* ridefinisci l'offset mobile */
+  }
+
+  .tree-panel {
+    width: 34px;
+  }
+
+  .horizontal-engine main {
+    margin-left: var(--content-offset);
+    width: calc(100% - var(--content-offset));
+    max-width: 100%;
+    min-width: 0;
+    padding: 76px 14px 40px;
+  }
+}
+
    
 
 
