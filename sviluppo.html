@@ -753,14 +753,41 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
 
 /* 5. la topologia diventa a colonna */
 @media (max-width: 700px) {
-  .topo-row.header { display: none; }
-  .topo-row {
-    display: block;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(0,0,0,.25);
+  .horizontal-engine main {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 80px 14px 40px;
   }
-  .topo-row:last-child { border-bottom: none; }
-  .topo-row > * { display: block; padding: 2px 0; font-size: 13px; }
+
+  .horizontal-engine {
+    margin-left: 32px;
+    width: calc(100% - 32px);
+  }
+
+  .tree-panel {
+    width: 32px;
+  }
+
+  .topbar {
+    padding-left: 52px;
+    padding-right: 8px;
+  }
+
+  .topbar-sub {
+    font-size: 10px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  pre {
+    font-size: 10.5px;
+    line-height: 1.5;
+    padding: 12px 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
 }
 
 
