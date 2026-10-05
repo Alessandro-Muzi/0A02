@@ -754,7 +754,7 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
 /* 5. la topologia diventa a colonna */
 
 
-@media (max-width: 700px) {
+   @media (max-width: 700px) {
   html, body {
     width: 100%;
     max-width: 100%;
@@ -789,11 +789,6 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     width: 34px;
     height: 100vh;
     z-index: var(--z-dots);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
   }
 
   .rail-dots a {
@@ -803,13 +798,40 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
 
   .topbar {
     position: fixed;
+    top: 0;
     left: 34px;
     right: 0;
     width: auto;
-    padding-left: 16px;
-    padding-right: 10px;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    min-height: auto;
+    display: flex;
+    align-items: center;
+    padding: 8px 10px 8px 12px;
+    height: 50px;
+  }
+
+  .topbar-sub {
+    font-size: 9px;
+    white-space: normal;
+    line-height: 1.2;
+    flex: 1;
+  }
+
+  .topbar-ts {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+
+  .topbar-ts a {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+    line-height: 22px;
   }
 
   .horizontal-engine main {
@@ -817,7 +839,7 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     max-width: 100%;
     min-width: 0;
     margin-left: 0;
-    padding: 76px 14px 40px;
+    padding: 58px 14px 40px;
   }
 
   main section {
@@ -833,7 +855,24 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     padding: 12px 10px;
   }
 }
-   
+
+@media (max-width: 420px) {
+  .topbar-ts a {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+    line-height: 18px;
+  }
+
+  .topbar {
+    padding: 6px 8px;
+    height: 44px;
+  }
+
+  .horizontal-engine main {
+    padding: 52px 10px 40px;
+  }
+}
 
 
 
@@ -846,23 +885,7 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     line-height: 1.2;
   }
 }
-@media (max-width: 700px) {
-  :root {
-    --content-offset: 34px;  /* ridefinisci l'offset mobile */
-  }
 
-  .tree-panel {
-    width: 34px;
-  }
-
-  .horizontal-engine main {
-    margin-left: var(--content-offset);
-    width: calc(100% - var(--content-offset));
-    max-width: 100%;
-    min-width: 0;
-    padding: 76px 14px 40px;
-  }
-}
 
    
 
