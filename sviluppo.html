@@ -752,27 +752,25 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
 }
 
 /* 5. la topologia diventa a colonna */
-
-
-   @media (max-width: 700px) {
+@media (max-width: 700px) {
   html, body {
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
   }
-
+  
   .layout {
     width: 100%;
     min-width: 0;
   }
-
+  
   .horizontal-engine {
     margin-left: 0;
     width: 100%;
     min-width: 0;
     display: block;
   }
-
+  
   .tree-panel {
     position: fixed;
     left: 0;
@@ -781,7 +779,7 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     height: 100vh;
     z-index: var(--z-rail);
   }
-
+  
   .rail-dots {
     position: fixed;
     top: 0;
@@ -789,33 +787,37 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     width: 34px;
     height: 100vh;
     z-index: var(--z-dots);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
   }
-
+  
   .rail-dots a {
     width: 10px;
     height: 10px;
   }
-
+  
   .topbar {
     position: fixed;
     top: 0;
     left: 34px;
     right: 0;
     width: auto;
-    min-height: auto;
+    height: 50px;
     display: flex;
     align-items: center;
     padding: 8px 10px 8px 12px;
-    height: 50px;
   }
-
+  
   .topbar-sub {
     font-size: 9px;
     white-space: normal;
     line-height: 1.2;
     flex: 1;
   }
-
+  
   .topbar-ts {
     position: relative;
     top: auto;
@@ -823,17 +825,69 @@ pre code { background: none; border: none; color: inherit; padding: 0; }
     left: auto;
     display: flex;
     gap: 4px;
-    flex-shrink: 0;
     margin-left: 8px;
+    flex-shrink: 0;
   }
-
+  
   .topbar-ts a {
     width: 22px;
     height: 22px;
     font-size: 10px;
     line-height: 22px;
   }
+  
+  .horizontal-engine main {
+    margin-left: 34px;
+    width: calc(100% - 34px);
+    max-width: calc(100% - 34px);
+    min-width: 0;
+    padding: 58px 14px 40px;
+  }
+  
+  main section {
+    margin: 0 -14px;
+    padding: 16px 14px 22px;
+  }
+  
+  pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 10.5px;
+    line-height: 1.5;
+    padding: 12px 10px;
+  }
+}
 
+@media (max-width: 420px) {
+  .topbar-ts a {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+    line-height: 18px;
+  }
+  
+  .topbar {
+    padding: 6px 8px;
+    height: 44px;
+  }
+  
+  .horizontal-engine main {
+    padding: 52px 10px 40px;
+  }
+}
+   
+
+
+
+
+
+
+
+
+
+
+
+   
   .horizontal-engine main {
     width: 100%;
     max-width: 100%;
