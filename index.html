@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0A02 — Biblioteca di Alessandro · Koha su Debian 13 con Ansible</title>
+<meta name="description" content="Documentazione tecnica del deployment automatizzato di Koha ILS su Debian 13: Ansible, MariaDB, OpenLDAP, BIND9, Headscale, Zabbix e nftables.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+  :root {
+    --paper:        #f5f3ee;
+    --paper-2:      #efece5;
+    --paper-3:      #e8e4dd;
+    --ink1:         #edeeeb;
+    --ink:          #0d0d0d;
+    --ink-soft:     #2d2d2d;
+    --muted:        #79736a;
+    --rule:         #d8d3c9;
+    --accent:       #8a3324;
+    --accent-2:     #4f6f52;
+    --warn:         #a9762d;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'Work Sans', system-ui, sans-serif;
+
+    /* Geometria isolata */
+    --rail-left-w: 30px;     /* Barra nera fissa a sinistra */
+    --nav-col-a: 287px;      /* Colonna A */
+    --nav-col-b: 281px;      /* Colonna B */
+    --rail-right-w: 8px;     /* BARRA DESTRAMENTE SOTTILE */
+
+    /* Punto esatto in cui deve iniziare il contenuto (main / topbar) */
+    --content-offset: calc(var(--rail-left-w) + var(--nav-col-a) + var(--nav-col-b) + var(--rail-right-w));
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100vh;
+    padding-left: var(--content-offset); /* CORRETTO: usa la coordinata unificata */
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── RAIL LEFT ─────────────────── */
+  .tree-panel {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--rail-left-w); /* CORRETTO */
+    height: 100vh;
+    background: var(--ink);
+    z-index: 30;
+  }
+  .tree-panel pre { display: none; }
+
+  /* ── TOPBAR ───────────────────────────────── */
+  .topbar {
+    position: fixed;
+    top: 0; 
+    left: var(--content-offset); /* CORRETTO */
+    right: 0;
+    height: auto;
+    min-height: 160px; 
+    display: flex;
+    flex-direction: column;
+    padding-top: 120px; 
+    padding-bottom: 18px; 
+    padding-left: 60px;
+    padding-right: 48px;
+    background: color-mix(in oklab, var(--paper) 70%, transparent);
+    backdrop-filter: blur(18px) saturate(5%);
+    font-family: var(--serif);
+    font-size: 30px;
+    color: var(--muted);
+    z-index: 20;
+    line-height: 1.2;
+    box-sizing: border-box;
+  }
+
+  .topbar-title {
+    font-size: clamp(20px, 2.2vw, 34px);
+    font-weight: bold;
+    letter-spacing: 0px;
+    margin: 0 0 6px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-sub {
+    font-size: clamp(11px, 1vw, 0.62em);
+    letter-spacing: 0px;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 60px;
+    width: 725px;
+    max-width: calc(100% - 108px);
+    height: 1px;
+    background: var(--rule);
+    pointer-events: none;
+  }
+
+  /* ── SIDEBAR ── */
+  nav {
+    width: calc(var(--nav-col-a) + var(--nav-col-b) + var(--rail-right-w)); /* CORRETTO */
+    position: fixed;
+    top: 0; 
+    left: var(--rail-left-w); /* CORRETTO */
+    height: 100vh;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start; /* CORRETTO: ancorato a sinistra senza galleggiare */
+    align-items: stretch;
+    z-index: 25;
+  }
+
+  .nav-col-a {
+    position: relative;
+    flex: 0 0 var(--nav-col-a);
+    width: var(--nav-col-a);
+    background-image: url('sfondo_sx.png');
+    background-repeat: no-repeat;
+    background-position: 0 center;
+    background-size: cover;
+  }
+
+  .nav-col-b {
+    flex: 0 0 var(--nav-col-b);
+    width: var(--nav-col-b);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px 0;
+    overflow-y: auto;
+    scrollbar-width: none;        /* Firefox */
+    -ms-overflow-style: none;     /* IE / Edge legacy */
+    background-image: url('sfondo_dx.png');
+    background-repeat: repeat-y;
+    background-position: center top;
+  }
+
+    .nav-col-b::-webkit-scrollbar {
+    display: none;
+}
+
+  /* BARRA A DESTRA DI NAV-COL-B */
+  .nav-rail-border {
+    flex: 0 0 var(--rail-right-w);
+    width: var(--rail-right-w); /* CORRETTO: risolto errore di sintassi 0(...) */
+    background: var(--ink);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+    padding: 0 30px 14px;
+    border-bottom: none;
+    letter-spacing: -.01em;
+    text-align: right;
+  }
+  .nav-logo::before {
+    content: '0A02';
+    display: block;
+    font-size: 18px;
+    letter-spacing: .04em;
+    color: #d98b6a;
+  }
+  .nav-logo span {
+    display: block;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    color: #ebeee5;
+    text-transform: uppercase;
+    letter-spacing: .22em;
+    margin-top: 4px;
+  }
+
+  .nav-section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: #b5b5b5;
+    padding: 14px 30px 4px;
+    text-align: right;
+  }
+  .nav-section-label:empty { padding: 6px 0 0; }
+
+  nav a {
+    position: relative;
+    display: block;
+    padding: 3px 30px;
+    color: #edeeeb;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 400;
+    border-left: none;
+    border-right: 2px solid transparent;
+    transition: color .18s ease, border-color .18s ease, padding .18s ease;
+    text-align: right;
+  }
+  nav a:hover {
+    background: color-mix(in oklab, #e2ebcf 60%, transparent);
+    color: var(--ink);
+  }
+  nav a.active {
+    background: color-mix(in oklab, #6e6e6e 25%, transparent);
+    color: #a6d3d5;
+    font-weight: 600;
+  }
+
+  .nav-footer {
+    position: absolute;
+    bottom: 30px;
+    left: 5%;
+    writing-mode: vertical-rl;
+    display: block;
+    transform: translateX(-50%) rotate(180deg);
+    padding: 0;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #edeeeb;
+    letter-spacing: .08em;
+  }
+
+  /* ── MAIN ─────────────────────────────────── */
+  main {
+    padding: 100px 40px 120px;
+    max-width: 800px;
+    margin: 0 0 0 25px;
+  }
+
+  section { scroll-margin-top: 96px; margin-bottom: 96px; }
+  #premessa { 
+    padding-top: 90px;
+    margin-bottom: 96px; 
+  }
+
+  section h2 {
+    font-family: var(--sans);
+    font-size: 20px;
+    letter-spacing: -.01em;
+    color: var(--ink);
+    font-weight: 600;
+    margin: 0 0 22px;
+    padding-top: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-top: 55px;
+  }
+  section h2::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+  section h2.subsection { display: block; font-size: 17px; margin-top: 52px; color: var(--accent); }
+  section h2.subsection::after { display: none; }
+
+  section h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 60px 0 12px;
+  }
+
+  p { margin-bottom: 18px; color: var(--ink-soft); font-family: var(--sans); font-size: 15px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code {
+    font-family: var(--mono);
+    font-size: .87em;
+    background: var(--paper-3);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--accent);
+  }
+
+  .callout {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    border-radius: 0;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    font-family: var(--sans);
+    color: var(--ink-soft);
+  }
+  .callout.green { border-left-color: var(--accent-2); }
+  .callout.yellow { border-left-color: var(--warn); }
+
+  pre {
+    background: var(--ink1);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 20px 22px;
+    overflow-x: auto;
+    margin-bottom: 24px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: #e6e3dc;
+  }
+  pre code { background: none; border: none; color: inherit; padding: 0; }
+
+  .comment { color: #7e786d; }
+  .key     { color: #b5783c; }
+  .val     { color: #7d8574; }
+  .sec     { color: #d98b6a; font-weight: 600; }
+  .ip      { color: #8fc0a9; }
+  .port    { color: #c7ad60; }
+  .iface   { color: #a47d93; }
+  .path    { color: #c7ad60; }
+
+  .topo {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 8px 20px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    margin-bottom: 20px;
+  }
+  .topo-row {
+    display: grid;
+    grid-template-columns: 170px 150px 1fr;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    gap: 7px;
+    align-items: center;
+  }
+  .topo-row:last-child { border-bottom: none; }
+  .topo-row.header { color: var(--muted); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  }
+  .badge.green { background: color-mix(in oklab, var(--accent-2) 10%, transparent); color: var(--accent-2); border-color: color-mix(in oklab, var(--accent-2) 28%, transparent); }
+  .badge.yellow { background: color-mix(in oklab, var(--warn) 12%, transparent); color: var(--warn); border-color: color-mix(in oklab, var(--warn) 30%, transparent); }
+
+  a.ext { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in oklab, var(--accent) 40%, transparent); }
+  a.ext:hover { border-bottom-color: var(--accent); }
+
+  ul, ol { margin: 0 0 18px 20px; }
+  li { margin-bottom: 6px; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; }
+
+  main [id] {
+    scroll-margin-top: 160px;
+  }
+
+@media (max-width: 1300px) {
+  /* Layout Colonne Navigation */
+  :root {
+    --nav-col-a: 0px;
+    --nav-col-b: 220px;
+  }
+
+  .nav-col-a {
+    display: none;
+  }
+
+  /* Scalatura Fluida Tipografia Main */
+  main p,
+  main li {
+    font-size: clamp(13px, 1.05vw, 15px);
+    line-height: 1.5;
+  }
+
+  main h2 {
+    font-size: clamp(1.3rem, 2vw, 1.8rem);
+    line-height: 1.25;
+  }
+
+  main h3 {
+    font-size: clamp(1.05rem, 1.4vw, 1.3rem);
+    line-height: 1.3;
+  }
+
+  /* Scalatura Fluida Tabella (Controllata) */
+  .topo-row {
+    font-size: clamp(12px, 0.95vw, 14px);
+  }
+}
+
+  @media (max-width: 980px) {
+  /* Layout Base e Topbar */
+  body { padding-left: 0; }
+  .tree-panel { display: none; }
+  nav { display: none; }
+
+  .topbar {
+    left: 0;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .topbar::after {
+    left: 20px;
+    width: calc(100% - 40px);
+    max-width: 100%;
+  }
+
+  main { padding: 40px 20px 90px; }
+
+  /* Tabella Topologia (Trasformazione Card) */
+  .topo-row.header {
+    display: none !important;
+  }
+
+  .topo-row {
+    display: block !important;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .topo-row:last-child {
+    border-bottom: none !important;
+  }
+
+  .topo-row > * {
+    display: block;
+    padding: 2px 0;
+    font-size: 13px !important; /* Dimensione fissa stabile per celle su mobile */
+    border: none !important;           
+    background: transparent !important; 
+  }
+}
+
+  .callout, .topo, pre {
+    color: #333333;
+  }
+  .callout h1, .callout h2, .callout h3, .callout h4,
+  .topo h1, .topo h2, .topo h3, .topo h4,
+  pre h1, pre h2, pre h3, pre h4 {
+    color: var(--ink) !important;
+  }
+
+</style>
+</head>
+<body>
+
+
+<div class="topbar">
+    
+    <span class="topbar-sub">0A02 - Deployment automatizzato di Koha ILS · Ansible · Debian 13</span>
+</div>
+
+
+<div class="tree-panel"><pre style="margin:0; background: transparent; border: none; overflow: visible; font-family:'Consolas', 'Courier New', monospace; font-size: 9.5px; line-height: 1.13; color: #ffffff; white-space: pre; padding: 5px 36px;">
+</pre></div>
+
+
+<nav>
+ <div class="nav-col-a">
+ <span class="nav-footer">© 2026 Alessandro Muzi</span>
+ </div>
+  <div class="nav-col-b">
+    <div class="nav-logo"><span>NAVIGAZIONE</span></div>
+    <div class="nav-section-label"></div>
+    <a href="#premessa">Introduzione</a>
+    <div class="nav-section-label">Infrastruttura</div>
+    <a href="#topologia">Topologia</a>
+    <a href="#ansible">Ansible &amp; architettura</a>
+    <a href="#nftables">Rete &amp; nftables</a>
+    <div class="nav-section-label">Servizi</div>
+    <a href="#mariadb">MariaDB</a>
+    <a href="#koha">Koha</a>
+    <a href="#openldap">OpenLDAP</a>
+    <a href="#bind9">BIND9</a>
+    <a href="#headscale">Headscale</a>
+    <a href="#zabbix">Zabbix</a>
+    <div class="nav-section-label">Troubleshooting</div>
+    <a href="#ts-mariadb">MariaDB — autenticazione</a>
+    <a href="#ts-ldap">Mapping LDAP — attributo "is"</a>
+    <a href="#ts-headscale">Headscale — porta &amp; permessi</a>
+    <a href="#ts-proxyjump">WSL, routing &amp; ProxyJump</a>
+    </div>
+  <div class="nav-rail-border"></div>   <!-- ← ora qui, fuori da nav-col-b -->
+</nav>
+
+<main>
+<section id="premessa">
+
+   <h2>Introduzione</h2>
+    <p>Mi interessava provare un gestionale per biblioteche, così dopo una rapida ricerca ho scoperto Koha: oltre a essere open source, è l'Integrated Library System più diffuso al mondo, con un ecosistema particolarmente ricco e attivo. 
+     Ho maturato un interesse specifico per questo prodotto, ed è la ragione per cui l'ho scelto come cuore di questo progetto. </p> 
+
+<p>La scelta di accompagnarlo con Debian, Apache, OpenLDAP e MariaDB è avvenuta invece per ragioni di integrazione, compatibilità e prestazioni , oltre logicamente al fattore open source, senza precludere in futuro 
+l'adozione di soluzioni come FreeIPA o alternative analoghe. </p>
+
+<p>Per la VPN cercavo una soluzione più scalabile rispetto a WireGuard puro, già usato in diverse esercitazioni al corso CEFI e nel progetto 0A01.Ho preso in considerazione prima Tailscale, per poi passare a Headscale: 
+a differenza del primo ,un servizio cloud gestito da terzi, Headscale mi offre controllo pieno e gestione diretta di ogni operazione, restando coerente con l'approccio self-hosted del resto dell'infrastruttura. </p>
+
+<p>Per il monitoraggio in tempo reale la scelta è caduta su Zabbix e, in tema di scalabilità e automazione, pur essendo l'infrastruttura pensata su due sole macchine, ho scelto comunque di affidare 
+l'intera installazione ad Ansible ,proprio per approfondirne l'uso e le peculiarità anche in un contesto di dimensioni ridotte. </p>
+
+<p>L'intero processo viene orchestrato e distribuito via SSH tramite WSL2, che funge da control node Ansible verso le due macchine di destinazione, entrambe VM Oracle VirtualBox: il server principale, che ospita Koha e tutti i suoi servizi di supporto, 
+e una VM dedicata isolata su una rete separata (LAN03),riservata al monitoraggio Zabbix </p>
+
+
+  </section>
+<section id="topologia">
+ 
+    <h2>Topologia</h2>
+    <div class="topo">
+      <div class="topo-row header">
+        <span>Host</span><span>IP</span><span>Ruolo</span>
+      </div>
+      <div class="topo-row">
+        <span>Server Koha</span>
+        <span><span class="badge">192.168.1.4</span></span>
+        <span>Koha · OpenLDAP · MariaDB · BIND9 · Headscale</span>
+      </div>
+      <div class="topo-row">
+        <span>VM Zabbix</span>
+        <span><span class="badge yellow">10.0.0.20</span></span>
+        <span>Zabbix · MariaDB · Headscale client</span>
+      </div>
+      <div class="topo-row">
+        <span>Headscale mesh</span>
+        <span><span class="badge green">100.64.0.0/10</span></span>
+        <span>VPN self-hosted tra i due nodi</span>
+      </div>
+    </div>
+  </section>
+
+
+
+<section id="ansible">
+  <h2>Ansible</h2>
+
+  <p>Ogni volta che il playbook viene eseguito, Ansible, via SSH con supporto ProxyJump per la rete dedicata a Zabbix, applica i ruoli assegnati a ciascun gruppo in <strong>playbook.yml</strong> e, per ognuno, esegue in ordine i task: installazione pacchetti, generazione dei file di configurazione dai template (con le variabili risolte da <strong>group_vars</strong>), avvio/riavvio dei servizi tramite handler quando necessario. Rilanciare il playbook su un'infrastruttura già configurata verifica e corregge eventuali scostamenti dallo stato desiderato, ripristinando la configurazione dei servizi.</p>
+
+  <h3>Creazione della struttura</h3>
+  <pre><span class="val">mkdir -p koha-ansible/{group_vars/all,roles/{bind9/{defaults,files,handlers,tasks,templates},headscale/{defaults,files,handlers,tasks,templates},headscale-client/{defaults,handlers,tasks},koha/{defaults,files,handlers,tasks,templates},mariadb/{defaults,files,handlers,tasks,templates},nftables/{defaults,handlers,tasks,templates},openldap/{defaults,files,tasks,templates},zabbix-server/{defaults,handlers,tasks}}}</span>
+</pre>
+
+  <p>o volendo:</p>
+
+  <pre><span class="comment">#!/bin/bash</span>
+<span class="key">standard</span>=(<span class="val">defaults files handlers tasks templates</span>)
+<span class="key">minimal</span>=(<span class="val">defaults handlers tasks</span>)
+
+<span class="val">mkdir -p koha-ansible/roles</span>
+
+<span class="sec">for</span> role <span class="sec">in</span> bind9 headscale koha mariadb; <span class="sec">do</span>
+    <span class="sec">for</span> dir <span class="sec">in</span> <span class="val">"${standard[@]}"</span>; <span class="sec">do</span>
+        <span class="val">mkdir -p "koha-ansible/roles/$role/$dir"</span>
+    <span class="sec">done</span>
+<span class="sec">done</span>
+
+<span class="sec">for</span> role <span class="sec">in</span> headscale-client zabbix-server; <span class="sec">do</span>
+    <span class="sec">for</span> dir <span class="sec">in</span> <span class="val">"${minimal[@]}"</span>; <span class="sec">do</span>
+        <span class="val">mkdir -p "koha-ansible/roles/$role/$dir"</span>
+    <span class="sec">done</span>
+<span class="sec">done</span>
+</pre>
+
+<pre>.
+├── koha-ansible
+│   ├── ansible.cfg
+│   ├── group_vars
+│   │   └── all
+│   │       ├── vars.yml
+│   │       └── vault.yml
+│   ├── hosts
+│   ├── output.log
+│   ├── playbook.yml
+│   └── roles
+│       ├── bind9
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       ├── db.192.168.1.j2
+│       │       ├── db.koha.lab.j2
+│       │       ├── named.conf.local.j2
+│       │       └── named.conf.options.j2
+│       ├── headscale
+│       │   ├── defaults
+│       │   │   └── main.yml
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       └── config.yaml.j2
+│       ├── headscale-client
+│       │   ├── defaults
+│       │   │   └── main.yml
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   └── tasks
+│       │       └── main.yml
+│       ├── koha
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   ├── instance.yml
+│       │   │   └── main.yml
+│       │   └── templates
+│       ├── mariadb
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── my-koha.cnf
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       └── koha.cnf.j2
+│       ├── nftables
+│       │   ├── defaults
+│       │   │   └── main.yml
+│       │   ├── handlers
+│       │   │   └── main.yml
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       │       └── nftables.conf.j2
+│       ├── openldap
+│       │   ├── defaults
+│       │   ├── files
+│       │   ├── tasks
+│       │   │   └── main.yml
+│       │   └── templates
+│       └── zabbix-server
+│           ├── defaults
+│           │   └── main.yml
+│           ├── handlers
+│           │   └── main.yml
+│           └── tasks
+│               └── main.yml
+└── tree.txt</pre>
+
+  
+
+  <h3>ansible.cfg</h3>
+  <pre><span class="sec">[defaults]</span>
+<span class="key">inventory</span> = <span class="val">hosts</span>
+<span class="key">host_key_checking</span> = <span class="val">False</span>
+<span class="key">pipelining</span> = <span class="val">True</span>
+</pre>
+
+  <h3>playbook.yml</h3>
+  <pre><span class="comment">- name: Configurazione Server Koha</span>
+  <span class="key">hosts:</span> <span class="val">debian</span>
+  <span class="key">become:</span> <span class="val">yes</span>
+  <span class="key">roles:</span>
+    <span class="key">-</span> <span class="val">mariadb</span>
+    <span class="key">-</span> <span class="val">headscale</span>
+    <span class="key">-</span> <span class="val">bind9</span>
+    <span class="key">-</span> <span class="val">openldap</span>
+    <span class="key">-</span> <span class="val">koha</span>
+
+<span class="comment">- name: Configurazione Server Zabbix</span>
+  <span class="key">hosts:</span> <span class="val">zabbix</span>
+  <span class="key">become:</span> <span class="val">yes</span>
+  <span class="key">roles:</span>
+    <span class="key">-</span> <span class="val">zabbix-server</span>
+    <span class="key">-</span> <span class="val">headscale-client</span>
+</pre>
+
+  <h3>hosts</h3>
+  <pre><span class="sec">[debian]</span>
+<span class="key">SERVER</span> <span class="key">ansible_host</span>=<span class="ip">192.168.1.4</span> <span class="key">ansible_user</span>=<span class="val">root</span>
+
+<span class="sec">[zabbix]</span>
+<span class="key">ZABBIX</span> <span class="key">ansible_host</span>=<span class="ip">10.0.0.20</span> <span class="key">ansible_user</span>=<span class="val">root</span> <span class="key">ansible_ssh_common_args</span>=<span class="val">'-o ProxyJump=root@192.168.1.4'</span>
+</pre>
+
+  <h3>group_vars/vars.yml</h3>
+  <pre><span class="key">ldap_organization:</span> <span class="val">"Biblioteca di Alessandro"</span>
+<span class="key">ldap_host:</span> <span class="val">"localhost"</span> <span class="comment"># O l'IP del server dove gira OpenLDAP</span>
+<span class="key">ldap_domain:</span> <span class="val">"biblioteca.local"</span>
+<span class="key">ldap_base_dn:</span> <span class="val">"dc=biblioteca,dc=local"</span>
+<span class="key">ldap_admin_dn:</span> <span class="val">"cn=admin,dc=biblioteca,dc=local"</span>
+<span class="key">ldap_admin_pass:</span> <span class="val">"lapassword"</span>
+<span class="key">zabbix_db_password:</span> <span class="val">"lapassword"</span>
+<span class="key">zabbix_db_name:</span> <span class="val">zabbix</span>
+<span class="key">zabbix_db_user:</span> <span class="val">zabbix</span>
+<span class="key">koha_instance_name:</span> <span class="val">"biblioteca"</span>
+<span class="key">ansible_python_interpreter:</span> <span class="path">/usr/bin/python3.13</span>
+<span class="comment"># group_vars/all.yml o simile</span>
+<span class="key">headscale_server_url:</span> <span class="val">"http://192.168.1.4:8443"</span>
+<span class="key">headscale_login_server:</span> <span class="val">"http://192.168.1.4:8443"</span>
+<span class="key">headscale_listen_port:</span> <span class="val">8443</span>
+<span class="key">headscale_preauth_key:</span> <span class="val">"{{ vault_headscale_preauth_key }}"</span>
+<span class="key">headscale_version:</span> <span class="val">"0.29.2"</span>
+</pre>
+
+  <p><span class="path">group_vars/all/</span> contiene le variabili condivise da tutti gli host: <strong>vars.yml</strong> per la configurazione in chiaro, <strong>vault.yml</strong> per i secret (password database, preauth key Headscale), cifrato tramite Ansible Vault e sicuro anche se pubblicato nel repository.</p>
+</section>
+
+
+
+
+<section id="nftables">
+  <h2>Rete &amp; nftables — Configurazione Firewall</h2>
+  <p>Gestione del firewall di sistema tramite nftables con Ansible: abilitazione dell'IP forwarding, gestione delle regole di filtraggio in ingresso e forward, e configurazione del NAT/masquerade.</p>
+
+  <h3>roles/nftables/defaults/main.yml</h3>
+  <pre><span class="key">nftables_wan_iface:</span> <span class="val">"enp0s3"</span>
+<span class="key">nftables_lan_iface:</span> <span class="val">"enp0s8"</span>
+<span class="key">nftables_zabbix_ip:</span> <span class="val">"10.0.0.20"</span>
+<span class="key">nftables_koha_port:</span> <span class="port">8080</span>
+<span class="key">nftables_headscale_port:</span> <span class="port">8443</span>
+<span class="key">nftables_wireguard_port:</span> <span class="port">51820</span>
+</pre>
+
+  <h3>roles/nftables/handlers/main.yml</h3>
+  <pre><span class="comment">- name: Ricarica nftables</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">nftables</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+</pre>
+
+  <h3>roles/nftables/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Installa nftables</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span> <span class="val">nftables</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">update_cache:</span> <span class="val">true</span>
+
+<span class="comment">- name: Abilita l'IP forwarding nel kernel</span>
+  <span class="key">ansible.posix.sysctl:</span>
+    <span class="key">name:</span> <span class="val">net.ipv4.ip_forward</span>
+    <span class="key">value:</span> <span class="val">'1'</span>
+    <span class="key">sysctl_set:</span> <span class="val">true</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">reload:</span> <span class="val">true</span>
+
+<span class="comment">- name: Distribuisci il file di configurazione nftables</span>
+  <span class="key">ansible.builtin.template:</span>
+    <span class="key">src:</span> <span class="path">nftables.conf.j2</span>
+    <span class="key">dest:</span> <span class="path">/etc/nftables.conf</span>
+    <span class="key">owner:</span> <span class="val">root</span>
+    <span class="key">group:</span> <span class="val">root</span>
+    <span class="key">mode:</span> <span class="val">'0640'</span>
+  <span class="key">notify:</span> <span class="val">Ricarica nftables</span>
+
+<span class="comment">- name: Abilita e avvia il servizio nftables</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">nftables</span>
+    <span class="key">state:</span> <span class="val">started</span>
+    <span class="key">enabled:</span> <span class="val">true</span>
+</pre>
+
+  <h3>roles/nftables/templates/nftables.conf.j2</h3>
+  <pre><span class="comment">#!/usr/sbin/nft -f</span>
+<span class="key">flush ruleset</span>
+
+<span class="sec">table ip filter</span> {
+    <span class="sec">chain input</span> {
+        <span class="key">type</span> <span class="val">filter</span> <span class="key">hook</span> <span class="val">input</span> <span class="key">priority</span> <span class="val">filter</span>; <span class="key">policy</span> <span class="val">drop</span>;
+        <span class="iface">iifname</span> <span class="val">"lo"</span> <span class="val">accept</span>
+        <span class="key">ct state</span> <span class="val">established,related</span> <span class="val">accept</span>
+        <span class="key">tcp dport</span> <span class="port">22</span> <span class="val">accept</span>
+        <span class="key">tcp dport</span> <span class="val">{{ nftables_koha_port }}</span> <span class="val">accept</span>
+        <span class="key">tcp dport</span> <span class="val">{{ nftables_headscale_port }}</span> <span class="val">accept</span>
+        <span class="key">udp dport</span> <span class="val">{{ nftables_wireguard_port }}</span> <span class="val">accept</span> <span class="comment"># Porta Headscale/WireGuard</span>
+        <span class="key">icmp type</span> <span class="val">echo-request</span> <span class="val">accept</span>
+    }
+
+    <span class="sec">chain forward</span> {
+        <span class="key">type</span> <span class="val">filter</span> <span class="key">hook</span> <span class="val">forward</span> <span class="key">priority</span> <span class="val">0</span>; <span class="key">policy</span> <span class="val">drop</span>;
+        <span class="key">ct state</span> <span class="val">established,related</span> <span class="val">accept</span>
+        <span class="iface">iifname</span> <span class="val">"{{ nftables_wan_iface }}"</span> <span class="iface">oifname</span> <span class="val">"{{ nftables_lan_iface }}"</span> <span class="key">ip daddr</span> <span class="ip">{{ nftables_zabbix_ip }}</span> <span class="key">tcp dport</span> <span class="port">22</span> <span class="val">accept</span>
+        <span class="iface">iifname</span> <span class="val">"{{ nftables_lan_iface }}"</span> <span class="iface">oifname</span> <span class="val">"{{ nftables_wan_iface }}"</span> <span class="val">accept</span>
+    }
+}
+
+<span class="sec">table ip nat</span> {
+    <span class="sec">chain postrouting</span> {
+        <span class="key">type</span> <span class="val">nat</span> <span class="key">hook</span> <span class="val">postrouting</span> <span class="key">priority</span> <span class="val">srcnat</span>; <span class="key">policy</span> <span class="val">accept</span>;
+        <span class="iface">oifname</span> <span class="val">"{{ nftables_wan_iface }}"</span> <span class="val">masquerade</span>
+    }
+}
+</pre>
+</section>
+
+
+
+
+
+
+<section id="mariadb">
+  <h2>MariaDB — Configurazione Ansible</h2>
+  <p>Installazione e ottimizzazione di MariaDB per Koha tramite Ansible, con configurazione del motore InnoDB, parametri di charset UTF-8 e creazione del database dedicato.</p>
+
+  <h3>roles/mariadb/handlers/main.yml</h3>
+  <pre><span class="comment">- name: Riavvia MariaDB</span>
+  <span class="key">service:</span>
+    <span class="key">name:</span> <span class="val">mariadb</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+</pre>
+
+  <h3>roles/mariadb/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Installo libreria Python per MySQL</span>
+  <span class="key">apt:</span>
+    <span class="key">name:</span> <span class="val">python3-pymysql</span>
+    <span class="key">state:</span> <span class="val">present</span>
+
+<span class="comment">- name: Verifico che MariaDB sia installato</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span> <span class="val">mariadb-server</span>
+    <span class="key">state:</span> <span class="val">present</span>
+
+<span class="comment">- name: Applico la configurazione ottimizzata per Koha</span>
+  <span class="key">template:</span>
+    <span class="key">src:</span> <span class="path">koha.cnf.j2</span>
+    <span class="key">dest:</span> <span class="path">/etc/mysql/mariadb.conf.d/koha.cnf</span>
+  <span class="key">notify:</span> <span class="val">Riavvia MariaDB</span>
+
+<span class="comment">- name: Creo il database per Koha</span>
+  <span class="key">mysql_db:</span>
+    <span class="key">name:</span> <span class="val">kohaDB</span>
+    <span class="key">state:</span> <span class="val">present</span>
+
+<span class="comment">- name: Creo l'utente per Koha</span>
+  <span class="key">community.mysql.mysql_user:</span>
+    <span class="key">name:</span> <span class="val">alessandro</span>
+    <span class="key">password:</span> <span class="val">"lapassword"</span>
+    <span class="key">priv:</span> <span class="val">'kohaDB.*:ALL,GRANT'</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">host:</span> <span class="val">localhost</span>
+    <span class="key">column_case_sensitive:</span> <span class="val">true</span>
+</pre>
+
+  <h3>templates/koha.cnf.j2</h3>
+  <pre><span class="sec">[mysqld]</span>
+<span class="comment"># Impostazioni ottimizzate per Koha</span>
+<span class="key">innodb_buffer_pool_size</span> = <span class="val">512M</span>  <span class="comment"># Regola in base alla tua RAM</span>
+<span class="key">innodb_log_file_size</span> = <span class="val">128M</span>
+<span class="key">innodb_flush_log_at_trx_commit</span> = <span class="val">2</span>
+<span class="key">innodb_file_per_table</span> = <span class="val">1</span>
+<span class="key">max_connections</span> = <span class="val">100</span>
+<span class="key">collation-server</span> = <span class="val">utf8mb4_unicode_ci</span>
+<span class="key">character-set-server</span> = <span class="val">utf8mb4</span>
+</pre>
+
+  <div class="callout">
+    <strong>Nota:</strong> Il task di copia del template usa la direttiva <strong>notify</strong> per innescare l'handler di riavvio del servizio <strong>mariadb</strong> solo in caso di modifiche al file di configurazione <strong>koha.cnf</strong>.
+  </div>
+</section>
+
+
+
+
+<section id="koha">
+  <h2>Koha — Deployment Ansible</h2>
+  <p>Installazione e configurazione automatizzata di Koha tramite Ansible, dalla configurazione dei moduli Apache fino all'integrazione LDAP con OpenLDAP.</p>
+
+  <h3>roles/koha/handlers/main.yml</h3>
+  <pre><span class="comment">- name: Riavviare Apache</span>
+  <span class="key">ansible.builtin.service:</span>
+    <span class="key">name:</span> <span class="val">apache2</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+</pre>
+
+  <h3>roles/koha/tasks/instance.yml</h3>
+  <pre><span class="comment">- name: Abilito il modulo rewrite di Apache</span>
+  <span class="key">community.general.apache2_module:</span>
+    <span class="key">name:</span> <span class="val">rewrite</span>
+    <span class="key">state:</span> <span class="val">present</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+
+<span class="comment">- name: Abilito il modulo cgi di Apache</span>
+  <span class="key">community.general.apache2_module:</span>
+    <span class="key">name:</span> <span class="val">cgi</span>
+    <span class="key">state:</span> <span class="val">present</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+
+<span class="comment">- name: Verifico se l'istanza Koha esiste</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">koha-list --enabled</span>
+  <span class="key">register:</span> <span class="val">koha_instances</span>
+  <span class="key">changed_when:</span> <span class="val">false</span>
+
+<span class="comment">- name: Creo l'istanza Koha</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">"koha-create --create-db biblioteca"</span>
+  <span class="key">when:</span> <span class="val">koha_instance_name not in koha_instances.stdout</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+
+<span class="comment">- name: Abilito il sito Koha in Apache</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">"a2ensite biblioteca"</span>
+  <span class="key">args:</span>
+    <span class="key">creates:</span> <span class="path">/etc/apache2/sites-enabled/biblioteca.conf</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+</pre>
+
+  <h3>roles/koha/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Mi assicuro che la directory dei keyring esista</span>
+  <span class="key">ansible.builtin.file:</span>
+    <span class="key">path:</span> <span class="path">/etc/apt/keyrings</span>
+    <span class="key">state:</span> <span class="val">directory</span>
+    <span class="key">mode:</span> <span class="val">'0755'</span>
+
+<span class="comment">- name: Scarico la chiave GPG di Koha</span>
+  <span class="key">ansible.builtin.get_url:</span>
+    <span class="key">url:</span> <span class="val">https://debian.koha-community.org/koha/gpg.asc</span>
+    <span class="key">dest:</span> <span class="path">/etc/apt/keyrings/koha-keyring.asc</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+
+<span class="comment">- name: Aggiungo il repository ufficiale di Koha</span>
+  <span class="key">ansible.builtin.apt_repository:</span>
+    <span class="key">repo:</span> <span class="val">"deb [signed-by=/etc/apt/keyrings/koha-keyring.asc] https://debian.koha-community.org/koha stable main"</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">filename:</span> <span class="val">koha</span>
+    <span class="key">update_cache:</span> <span class="val">yes</span>
+
+<span class="comment">- name: Aggiorno la cache di APT e installo Koha e dipendenze</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span>
+      <span class="key">-</span> <span class="val">koha-common</span>
+      <span class="key">-</span> <span class="val">apache2</span>
+      <span class="key">-</span> <span class="val">libdbd-mysql-perl</span>
+      <span class="key">-</span> <span class="val">libnet-ldap-perl</span>
+      <span class="key">-</span> <span class="val">libcrypt-eksblowfish-perl</span>
+      <span class="key">-</span> <span class="val">libauthen-sasl-perl</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">update_cache:</span> <span class="val">yes</span>
+
+<span class="comment">- name: Includo i task per la creazione dell'istanza</span>
+  <span class="key">ansible.builtin.include_tasks:</span> <span class="path">instance.yml</span>
+
+<span class="comment">- name: Configuro l'autenticazione OpenLDAP in koha-conf.xml</span>
+  <span class="key">ansible.builtin.blockinfile:</span>
+    <span class="key">path:</span> <span class="path">/etc/koha/sites/biblioteca/koha-conf.xml</span>
+    <span class="key">marker:</span> <span class="val">"<!-- {mark} ANSIBLE MANAGED BLOCK: LDAP -->"</span>
+    <span class="key">insertbefore:</span> <span class="val">"&lt;/config&gt;"</span>
+    <span class="key">block:</span> <span class="val">|</span>
+      <span class="key">&lt;useldapserver&gt;</span><span class="val">1</span><span class="key">&lt;/useldapserver&gt;</span>
+      <span class="key">&lt;ldapserver</span> <span class="sec">id</span>=<span class="val">"ldapserver"</span><span class="key">&gt;</span>
+        <span class="key">&lt;hostname&gt;</span><span class="val">{{ ldap_host }}</span><span class="key">&lt;/hostname&gt;</span>
+        <span class="key">&lt;port&gt;</span><span class="val">389</span><span class="key">&lt;/port&gt;</span>
+        <span class="key">&lt;base&gt;</span><span class="val">ou=users,{{ ldap_base_dn }}</span><span class="key">&lt;/base&gt;</span>
+        <span class="key">&lt;user&gt;</span><span class="val">{{ ldap_admin_dn }}</span><span class="key">&lt;/user&gt;</span>
+        <span class="key">&lt;pass&gt;</span><span class="val">{{ ldap_admin_pass }}</span><span class="key">&lt;/pass&gt;</span>
+        <span class="key">&lt;replicate&gt;</span><span class="val">1</span><span class="key">&lt;/replicate&gt;</span>
+        <span class="key">&lt;update&gt;</span><span class="val">1</span><span class="key">&lt;/update&gt;</span>
+        <span class="key">&lt;mapping&gt;</span>
+          <span class="key">&lt;firstname</span> <span class="sec">is</span>=<span class="val">"givenName"</span><span class="key">&gt;&lt;/firstname&gt;</span>
+          <span class="key">&lt;surname</span> <span class="sec">is</span>=<span class="val">"sn"</span><span class="key">&gt;&lt;/surname&gt;</span>
+          <span class="key">&lt;address</span> <span class="sec">is</span>=<span class="val">"postalAddress"</span><span class="key">&gt;&lt;/address&gt;</span>
+          <span class="key">&lt;email</span> <span class="sec">is</span>=<span class="val">"mail"</span><span class="key">&gt;&lt;/email&gt;</span>
+          <span class="key">&lt;branchcode</span> <span class="sec">is</span>=<span class="val">"branch"</span><span class="key">&gt;</span>MAIN<span class="key">&lt;/branchcode&gt;</span>
+          <span class="key">&lt;categorycode</span> <span class="sec">is</span>=<span class="val">"employeetype"</span><span class="key">&gt;</span>PT<span class="key">&lt;/categorycode&gt;</span>
+          <span class="key">&lt;userid</span> <span class="sec">is</span>=<span class="val">"uid"</span><span class="key">&gt;&lt;/userid&gt;</span>
+          <span class="key">&lt;password</span> <span class="sec">is</span>=<span class="val">"userPassword"</span><span class="key">&gt;&lt;/password&gt;</span>
+        <span class="key">&lt;/mapping&gt;</span>
+      <span class="key">&lt;/ldapserver&gt;</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+</pre>
+
+  <div class="callout">
+    <strong>Nota:</strong> L'attributo <strong>is=</strong> mappa i campi del form Koha agli attributi LDAP corrispondenti. I valori statici (come <strong>MAIN</strong> e <strong>PT</strong>) vengono usati di default se l'attributo LDAP non esiste.
+  </div>
+</section>
+
+
+<section id="openldap">
+  <h2>OpenLDAP — Configurazione Ansible</h2>
+  <p>Installazione di OpenLDAP tramite Ansible, con generazione dell'hash della password amministratore e creazione della struttura base del database.</p>
+
+  <h3>roles/openldap/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Installo OpenLDAP e utility di gestione</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span>
+      <span class="key">-</span> <span class="val">slapd</span>
+      <span class="key">-</span> <span class="val">ldap-utils</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">update_cache:</span> <span class="val">yes</span>
+
+<span class="comment">- name: Genero l'hash della password amministratore</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">"slappasswd -s {{ ldap_admin_pass }}"</span>
+  <span class="key">register:</span> <span class="val">ldap_password_hash</span>
+  <span class="key">changed_when:</span> <span class="val">false</span>
+
+<span class="comment">- name: Creo il file LDIF temporaneo per la configurazione del database</span>
+  <span class="key">ansible.builtin.copy:</span>
+    <span class="key">dest:</span> <span class="path">/tmp/db.ldif</span>
+    <span class="key">mode:</span> <span class="val">'0600'</span>
+    <span class="key">content:</span> <span class="val">|</span>
+      <span class="key">dn:</span> <span class="val">olcDatabase={1}mdb,cn=config</span>
+      <span class="sec">changetype:</span> <span class="val">modify</span>
+      <span class="sec">replace:</span> <span class="val">olcSuffix</span>
+      <span class="key">olcSuffix:</span> <span class="val">{{ ldap_base_dn }}</span>
+      <span class="key">-</span>
+      <span class="sec">replace:</span> <span class="val">olcRootDN</span>
+      <span class="key">olcRootDN:</span> <span class="val">{{ ldap_admin_dn }}</span>
+      <span class="key">-</span>
+      <span class="sec">replace:</span> <span class="val">olcRootPW</span>
+      <span class="key">olcRootPW:</span> <span class="val">{{ ldap_password_hash.stdout }}</span>
+
+<span class="comment">- name: Verifico il valore attuale della configurazione del database</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">&gt;</span>
+    <span class="val">ldapsearch -Y EXTERNAL -H ldapi:/// -b "olcDatabase={1}mdb,cn=config"</span>
+    <span class="val">-LLL olcSuffix olcRootDN</span>
+  <span class="key">register:</span> <span class="val">ldap_current_config</span>
+  <span class="key">changed_when:</span> <span class="val">false</span>
+
+<span class="comment">- name: Applico la configurazione iniziale del database OpenLDAP</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/db.ldif</span>
+  <span class="key">when:</span> <span class="val">&gt;</span>
+    <span class="val">ldap_base_dn not in ldap_current_config.stdout or</span>
+    <span class="val">ldap_admin_dn not in ldap_current_config.stdout</span>
+
+<span class="comment">- name: Creo la struttura base (Organizzazione e Gruppo Utenti)</span>
+  <span class="key">ansible.builtin.copy:</span>
+    <span class="key">dest:</span> <span class="path">/tmp/structure.ldif</span>
+    <span class="key">mode:</span> <span class="val">'0600'</span>
+    <span class="key">content:</span> <span class="val">|</span>
+      <span class="key">dn:</span> <span class="val">{{ ldap_base_dn }}</span>
+      <span class="key">objectClass:</span> <span class="val">top</span>
+      <span class="key">objectClass:</span> <span class="val">dcObject</span>
+      <span class="key">objectClass:</span> <span class="val">organization</span>
+      <span class="key">o:</span> <span class="val">{{ ldap_organization }}</span>
+      <span class="key">dc:</span> <span class="val">{{ ldap_domain.split('.')[0] }}</span>
+
+      <span class="key">dn:</span> <span class="val">ou=users,{{ ldap_base_dn }}</span>
+      <span class="key">objectClass:</span> <span class="val">top</span>
+      <span class="key">objectClass:</span> <span class="val">organizationalUnit</span>
+      <span class="key">ou:</span> <span class="val">users</span>
+
+<span class="comment">- name: Applico la struttura base nel database OpenLDAP</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">"ldapadd -x -D {{ ldap_admin_dn }} -w {{ ldap_admin_pass }} -f /tmp/structure.ldif"</span>
+  <span class="key">register:</span> <span class="val">ldap_add_result</span>
+  <span class="key">failed_when:</span>
+    <span class="key">-</span> <span class="val">ldap_add_result.rc != 0</span>
+    <span class="key">-</span> <span class="val">"'Already exists' not in ldap_add_result.stderr"</span>
+  <span class="key">changed_when:</span> <span class="val">"'Already exists' not in ldap_add_result.stderr"</span>
+</pre>
+
+  <div class="callout">
+    <strong>Nota:</strong> I file LDIF temporanei vengono creati con permessi ristretti (<strong>0600</strong>) per motivi di sicurezza, poiché contengono la password amministratore. La gestione dei risultati usa <strong>failed_when</strong> e <strong>changed_when</strong> per ignorare l'errore "Already exists" — la struttura potrebbe già essere presente da precedenti esecuzioni.
+  </div>
+</section>
+
+
+
+
+<section id="bind9">
+  <h2>BIND9 — Configurazione DNS</h2>
+  <p>Installazione e configurazione di BIND9 come DNS server locale con zone dirette e inverse, query inoltrate ai DNS pubblici.</p>
+
+  <h3>roles/bind9/handlers/main.yml</h3>
+  <pre><span class="comment">- name: riavvia bind9</span>
+  <span class="key">service:</span>
+    <span class="key">name:</span> <span class="val">bind9</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+    <span class="key">enabled:</span> <span class="val">yes</span>
+</pre>
+
+  <h3>roles/bind9/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Installo Bind9 e strumenti di utilità</span>
+  <span class="key">apt:</span>
+    <span class="key">name:</span>
+      <span class="key">-</span> <span class="val">bind9</span>
+      <span class="key">-</span> <span class="val">bind9utils</span>
+      <span class="key">-</span> <span class="val">bind9-dnsutils</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">update_cache:</span> <span class="val">yes</span>
+
+<span class="comment">- name: Copio la configurazione principale (options)</span>
+  <span class="key">template:</span>
+    <span class="key">src:</span> <span class="path">named.conf.options.j2</span>
+    <span class="key">dest:</span> <span class="path">/etc/bind/named.conf.options</span>
+    <span class="key">owner:</span> <span class="val">root</span>
+    <span class="key">group:</span> <span class="val">bind</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+  <span class="key">notify:</span> <span class="val">riavvia bind9</span>
+
+<span class="comment">- name: Copio la configurazione locale (zone)</span>
+  <span class="key">template:</span>
+    <span class="key">src:</span> <span class="path">named.conf.local.j2</span>
+    <span class="key">dest:</span> <span class="path">/etc/bind/named.conf.local</span>
+    <span class="key">owner:</span> <span class="val">root</span>
+    <span class="key">group:</span> <span class="val">bind</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+  <span class="key">notify:</span> <span class="val">riavvia bind9</span>
+
+<span class="comment">- name: Copio il file della zona diretta</span>
+  <span class="key">template:</span>
+    <span class="key">src:</span> <span class="path">db.koha.lab.j2</span>
+    <span class="key">dest:</span> <span class="path">/etc/bind/db.koha.lab</span>
+    <span class="key">owner:</span> <span class="val">root</span>
+    <span class="key">group:</span> <span class="val">bind</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+  <span class="key">notify:</span> <span class="val">riavvia bind9</span>
+
+<span class="comment">- name: Copio il file della zona inversa</span>
+  <span class="key">template:</span>
+    <span class="key">src:</span> <span class="path">db.192.168.1.j2</span>
+    <span class="key">dest:</span> <span class="path">/etc/bind/db.192.168.1</span>
+    <span class="key">owner:</span> <span class="val">root</span>
+    <span class="key">group:</span> <span class="val">bind</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+  <span class="key">notify:</span> <span class="val">riavvia bind9</span>
+
+<span class="comment">- name: Verifica che la configurazione sia corretta</span>
+  <span class="key">command:</span> <span class="val">named-checkconf</span>
+  <span class="key">changed_when:</span> <span class="val">false</span>
+</pre>
+
+  <h3>templates/named.conf.options.j2</h3>
+  <pre><span class="key">options</span> {
+    <span class="key">directory</span> <span class="val">"/var/cache/bind"</span>;
+
+    <span class="comment">// Imposta l'IP su cui Bind deve ascoltare</span>
+    <span class="key">listen-on</span> { <span class="ip">127.0.0.1</span>; <span class="ip">192.168.1.4</span>; };
+
+    <span class="comment">// Sicurezza: solo le reti locali possono fare query</span>
+    <span class="key">allow-query</span> { <span class="val">localhost</span>; <span class="ip">192.168.1.0/24</span>; };
+
+    <span class="comment">// Inoltra le query sconosciute a questi DNS</span>
+    <span class="key">forwarders</span> {
+        <span class="ip">1.1.1.1</span>;
+        <span class="ip">8.8.8.8</span>;
+    };
+
+    <span class="key">dnssec-validation</span> <span class="val">auto</span>;
+    <span class="key">listen-on-v6</span> { <span class="val">any</span>; };
+};
+</pre>
+
+  <h3>templates/named.conf.local.j2</h3>
+  <pre><span class="key">zone</span> <span class="val">"koha.lab"</span> {
+    <span class="key">type</span> <span class="val">master</span>;
+    <span class="key">file</span> <span class="path">"/etc/bind/db.koha.lab"</span>;
+};
+
+<span class="comment">// Zona inversa per la subnet 192.168.1.0</span>
+<span class="key">zone</span> <span class="val">"1.168.192.in-addr.arpa"</span> {
+    <span class="key">type</span> <span class="val">master</span>;
+    <span class="key">file</span> <span class="path">"/etc/bind/db.192.168.1"</span>;
+};
+</pre>
+
+  <h3>templates/db.koha.lab.j2</h3>
+  <pre><span class="val">$TTL</span> <span class="val">604800</span>
+<span class="key">@</span>   <span class="sec">IN</span>  <span class="sec">SOA</span> <span class="val">ns1.koha.lab. admin.koha.lab.</span> (
+            <span class="val">2026070401</span> <span class="comment">; Serial</span>
+            <span class="val">604800</span>     <span class="comment">; Refresh</span>
+            <span class="val">86400</span>      <span class="comment">; Retry</span>
+            <span class="val">2419200</span>    <span class="comment">; Expire</span>
+            <span class="val">604800</span> )   <span class="comment">; Negative Cache TTL</span>
+
+<span class="key">@</span>       <span class="sec">IN</span>  <span class="sec">NS</span>  <span class="val">ns1.koha.lab.</span>
+<span class="key">ns1</span>     <span class="sec">IN</span>  <span class="sec">A</span>   <span class="ip">192.168.1.4</span>
+<span class="key">opac</span>    <span class="sec">IN</span>  <span class="sec">A</span>   <span class="ip">192.168.1.4</span>
+<span class="key">intranet</span> <span class="sec">IN</span>  <span class="sec">A</span>   <span class="ip">192.168.1.4</span>
+</pre>
+
+  <h3>templates/db.192.168.1.j2</h3>
+  <pre><span class="val">$TTL</span> <span class="val">604800</span>
+<span class="key">@</span>   <span class="sec">IN</span>  <span class="sec">SOA</span> <span class="val">ns1.koha.lab. admin.koha.lab.</span> (
+            <span class="val">2026070401</span> <span class="comment">; Serial</span>
+            <span class="val">604800</span>
+            <span class="val">86400</span>
+            <span class="val">2419200</span>
+            <span class="val">604800</span> )
+
+<span class="key">@</span>       <span class="sec">IN</span>  <span class="sec">NS</span>  <span class="val">ns1.koha.lab.</span>
+
+<span class="comment">; Mapping dell'host (usa l'ultimo ottetto dell'IP, es. 4)</span>
+<span class="key">4</span>      <span class="sec">IN</span>  <span class="sec">PTR</span> <span class="val">ns1.koha.lab.</span>
+<span class="key">4</span>      <span class="sec">IN</span>  <span class="sec">PTR</span> <span class="val">opac.koha.lab.</span>
+<span class="key">4</span>      <span class="sec">IN</span>  <span class="sec">PTR</span> <span class="val">intranet.koha.lab.</span>
+</pre>
+
+  <div class="callout">
+    <strong>Nota:</strong> Le zone dirette e inverse sono configurate come master. Il Serial deve essere incrementato manualmente ogni volta che il file della zona viene modificato, altrimenti i nameserver secondari (se presenti) non sincronizzeranno i cambiamenti.
+  </div>
+</section>
+
+
+
+<section id="headscale">
+  <h2>Headscale — VPN Mesh Ansible</h2>
+  <p>Installazione di Headscale come server VPN self-hosted e configurazione dei client Tailscale per la connessione alla mesh.</p>
+
+  <h3>Headscale Server</h3>
+
+  <h3>roles/headscale/defaults/main.yml</h3>
+  <pre><span class="comment"># Dominio pubblico (o interno) su cui sarà raggiungibile Headscale</span>
+<span class="key">headscale_server_url:</span> <span class="val">"https://192.168.1.4:8443"</span>
+
+<span class="comment"># Porta di ascolto interna di Headscale</span>
+<span class="key">headscale_listen_port:</span> <span class="val">8443</span>
+
+<span class="comment"># Percorso base dei dati e della configurazione</span>
+<span class="key">headscale_config_dir:</span> <span class="path">/etc/headscale</span>
+<span class="key">headscale_data_dir:</span> <span class="path">/var/lib/headscale</span>
+
+<span class="comment"># Range IP della tailnet (default Tailscale/Headscale)</span>
+<span class="key">headscale_ip_prefix_v4:</span> <span class="val">"100.64.0.0/10"</span>
+
+<span class="comment"># Nome utente/namespace di default</span>
+<span class="key">headscale_default_user:</span> <span class="val">homelab</span>
+
+<span class="comment"># Base domain per MagicDNS</span>
+<span class="key">headscale_base_domain:</span> <span class="val">"lab.internal"</span>
+</pre>
+
+  <h3>roles/headscale/handlers/main.yml</h3>
+  <pre><span class="comment">- name: riavvia headscale</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">headscale</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+</pre>
+
+  <h3>roles/headscale/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Scarica il pacchetto .deb di Headscale dalla release GitHub</span>
+  <span class="key">ansible.builtin.get_url:</span>
+    <span class="key">url:</span> <span class="val">"https://github.com/juanfont/headscale/releases/download/v{{ headscale_version }}/headscale_{{ headscale_version }}_linux_amd64.deb"</span>
+    <span class="key">dest:</span> <span class="path">/tmp/headscale_{{ headscale_version }}.deb</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+  <span class="key">register:</span> <span class="val">headscale_download</span>
+
+<span class="comment">- name: Installa il pacchetto Headscale</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">deb:</span> <span class="path">/tmp/headscale_{{ headscale_version }}.deb</span>
+    <span class="key">state:</span> <span class="val">present</span>
+  <span class="key">when:</span> <span class="val">headscale_download is changed</span>
+
+<span class="comment">- name: Crea le directory dati e configurazione</span>
+  <span class="key">ansible.builtin.file:</span>
+    <span class="key">path:</span> <span class="val">"{{ item }}"</span>
+    <span class="key">state:</span> <span class="val">directory</span>
+    <span class="key">owner:</span> <span class="val">headscale</span>
+    <span class="key">group:</span> <span class="val">headscale</span>
+    <span class="key">mode:</span> <span class="val">'0750'</span>
+  <span class="key">loop:</span>
+    <span class="key">-</span> <span class="val">"{{ headscale_config_dir }}"</span>
+    <span class="key">-</span> <span class="val">"{{ headscale_data_dir }}"</span>
+
+<span class="comment">- name: Distribuisci il file di configurazione config.yaml</span>
+  <span class="key">ansible.builtin.template:</span>
+    <span class="key">src:</span> <span class="path">config.yaml.j2</span>
+    <span class="key">dest:</span> <span class="path">{{ headscale_config_dir }}/config.yaml</span>
+    <span class="key">owner:</span> <span class="val">headscale</span>
+    <span class="key">group:</span> <span class="val">headscale</span>
+    <span class="key">mode:</span> <span class="val">'0640'</span>
+  <span class="key">notify:</span> <span class="val">riavvia headscale</span>
+
+<span class="comment">- name: Abilita e avvia il servizio headscale</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">headscale</span>
+    <span class="key">state:</span> <span class="val">started</span>
+    <span class="key">enabled:</span> <span class="val">true</span>
+
+<span class="comment">- name: Verifica se l'utente di default esiste già</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">"headscale users list --output json"</span>
+  <span class="key">register:</span> <span class="val">headscale_users_list</span>
+  <span class="key">changed_when:</span> <span class="val">false</span>
+
+<span class="comment">- name: Crea l'utente/namespace di default nella tailnet</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">"headscale users create {{ headscale_default_user }}"</span>
+  <span class="key">when:</span> <span class="val">headscale_default_user not in headscale_users_list.stdout</span>
+  <span class="key">register:</span> <span class="val">headscale_user_create</span>
+  <span class="key">changed_when:</span> <span class="val">headscale_user_create.rc == 0</span>
+</pre>
+
+  <h3>roles/headscale/templates/config.yaml.j2</h3>
+  <pre><span class="key">server_url:</span> <span class="val">{{ headscale_server_url }}</span>
+<span class="key">listen_addr:</span> <span class="val">0.0.0.0:{{ headscale_listen_port }}</span>  <span class="comment"># NON 127.0.0.1: vedi troubleshooting</span>
+<span class="key">metrics_listen_addr:</span> <span class="ip">127.0.0.1</span><span class="val">:9090</span>
+
+<span class="key">private_key_path:</span> <span class="val">{{ headscale_data_dir }}/private.key</span>
+<span class="key">noise:</span>
+  <span class="key">private_key_path:</span> <span class="val">{{ headscale_data_dir }}/noise_private.key</span>  <span class="comment"># Path in /var/lib, non /etc</span>
+
+<span class="key">prefixes:</span>
+  <span class="key">v4:</span> <span class="val">{{ headscale_ip_prefix_v4 }}</span>
+
+<span class="key">derp:</span>
+  <span class="key">server:</span>
+    <span class="key">enabled:</span> <span class="val">false</span>
+  <span class="key">urls:</span>
+    <span class="key">-</span> <span class="val">https://controlplane.tailscale.com/derpmap/default</span>
+  <span class="key">auto_update_enabled:</span> <span class="val">true</span>
+  <span class="key">update_frequency:</span> <span class="val">24h</span>
+
+<span class="key">disable_check_updates:</span> <span class="val">true</span>
+
+<span class="key">database:</span>
+  <span class="key">type:</span> <span class="val">sqlite</span>
+  <span class="key">sqlite:</span>
+    <span class="key">path:</span> <span class="val">{{ headscale_data_dir }}/db.sqlite</span>
+
+<span class="key">log:</span>
+  <span class="key">level:</span> <span class="val">info</span>
+
+<span class="key">dns:</span>
+  <span class="key">magic_dns:</span> <span class="val">true</span>
+  <span class="key">base_domain:</span> <span class="val">{{ headscale_base_domain }}</span>
+  <span class="key">nameservers:</span>
+    <span class="key">global:</span>
+      <span class="key">-</span> <span class="ip">1.1.1.1</span>
+      <span class="key">-</span> <span class="ip">9.9.9.9</span>
+</pre>
+
+  <h2 class="subsection">Headscale Client (Tailscale)</h2>
+
+  <h3>roles/headscale-client/defaults/main.yml</h3>
+  <pre><span class="key">headscale_login_server:</span> <span class="val">"http://192.168.1.4:8443"</span>
+<span class="key">headscale_preauth_key:</span> <span class="val">"{{ vault_headscale_preauth_key }}"</span>
+</pre>
+
+  <h3>roles/headscale-client/handlers/main.yml</h3>
+  <pre><span class="comment">- name: Aggiorna cache apt</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">update_cache:</span> <span class="val">true</span>
+</pre>
+
+  <h3>roles/headscale-client/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Installa dipendenze per il repository Tailscale</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span>
+      <span class="key">-</span> <span class="val">curl</span>
+      <span class="key">-</span> <span class="val">gnupg</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">update_cache:</span> <span class="val">true</span>
+
+<span class="comment">- name: Aggiungi la chiave GPG del repository Tailscale</span>
+  <span class="key">ansible.builtin.get_url:</span>
+    <span class="key">url:</span> <span class="val">https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg</span>
+    <span class="key">dest:</span> <span class="path">/usr/share/keyrings/tailscale-archive-keyring.gpg</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+
+<span class="comment">- name: Aggiungi il repository APT di Tailscale</span>
+  <span class="key">ansible.builtin.get_url:</span>
+    <span class="key">url:</span> <span class="val">https://pkgs.tailscale.com/stable/debian/trixie.tailscale-keyring.list</span>
+    <span class="key">dest:</span> <span class="path">/etc/apt/sources.list.d/tailscale.list</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+  <span class="key">notify:</span> <span class="val">Aggiorna cache apt</span>
+
+<span class="comment">- name: Applica subito gli handler in sospeso</span>
+  <span class="key">ansible.builtin.meta:</span> <span class="val">flush_handlers</span>
+
+<span class="comment">- name: Installa il pacchetto tailscale</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span> <span class="val">tailscale</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">update_cache:</span> <span class="val">true</span>
+
+<span class="comment">- name: Abilita e avvia il servizio tailscaled</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">tailscaled</span>
+    <span class="key">state:</span> <span class="val">started</span>
+    <span class="key">enabled:</span> <span class="val">true</span>
+
+<span class="comment">- name: Verifica lo stato attuale della connessione tailscale</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">tailscale status --json</span>
+  <span class="key">register:</span> <span class="val">tailscale_status</span>
+  <span class="key">changed_when:</span> <span class="val">false</span>
+  <span class="key">failed_when:</span> <span class="val">false</span>
+
+<span class="comment">- name: Connetti il nodo alla tailnet Headscale tramite preauth key</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">&gt;</span>
+    <span class="val">tailscale up</span>
+    <span class="val">--login-server={{ headscale_login_server }}</span>
+    <span class="val">--authkey={{ headscale_preauth_key }}</span>
+    <span class="val">--accept-routes</span>
+  <span class="key">register:</span> <span class="val">tailscale_up_result</span>
+  <span class="key">changed_when:</span> <span class="val">"'Success' in tailscale_up_result.stdout or tailscale_up_result.rc == 0"</span>
+  <span class="key">when:</span> <span class="val">&gt;</span>
+    <span class="val">tailscale_status.rc != 0 or</span>
+    <span class="val">'"BackendState":"Running"' not in tailscale_status.stdout</span>
+</pre>
+
+  <div class="callout">
+    <strong>Nota:</strong> La preauth key è memorizzata in vault e permette ai client di unirsi automaticamente alla tailnet Headscale senza intervento manuale. Il file <strong>config.yaml.j2</strong> richiede <strong>ProtectSystem=strict</strong> nel systemd unit, quindi i dati vanno in <strong>/var/lib</strong>, non in <strong>/etc</strong>.
+  </div>
+</section>
+
+
+
+<section id="zabbix">
+  <h2>Zabbix — Server di Monitoraggio Ansible</h2>
+  <p>Installazione di Zabbix server con MariaDB, frontend PHP, e agenti di monitoraggio. Configurazione automatizzata via Ansible con gestione dello schema SQL iniziale.</p>
+
+  <h3>roles/zabbix-server/defaults/main.yml</h3>
+  <pre><span class="key">zabbix_version:</span> <span class="val">"7.0"</span>
+<span class="comment"># Nome in codice della release Debian (es. "trixie", "bookworm")</span>
+<span class="key">zabbix_debian_release:</span> <span class="val">"trixie"</span>
+
+<span class="key">zabbix_db_name:</span> <span class="val">zabbix</span>
+<span class="key">zabbix_db_user:</span> <span class="val">zabbix</span>
+<span class="key">zabbix_db_password:</span> <span class="val">"lapassword"</span>
+
+<span class="key">zabbix_server_listen_port:</span> <span class="val">10051</span>
+<span class="key">zabbix_frontend_timezone:</span> <span class="val">"Europe/Rome"</span>
+
+<span class="comment"># Se true, il ruolo importa lo schema SQL iniziale (solo al primo run)</span>
+<span class="key">zabbix_import_schema:</span> <span class="val">true</span>
+</pre>
+
+  <h3>roles/zabbix-server/handlers/main.yml</h3>
+  <pre><span class="comment">- name: Riavviare Zabbix server</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">zabbix-server</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+
+<span class="comment">- name: Riavviare Apache</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">apache2</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+</pre>
+
+  <h3>roles/zabbix-server/tasks/main.yml</h3>
+  <pre><span class="comment">- name: Installa dipendenze base (gnupg per repository esterni)</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span> <span class="val">gnupg</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">update_cache:</span> <span class="val">true</span>
+
+<span class="comment">- name: Scarica la chiave GPG ufficiale di Zabbix</span>
+  <span class="key">ansible.builtin.get_url:</span>
+    <span class="key">url:</span> <span class="val">https://repo.zabbix.com/zabbix-official-repo.key</span>
+    <span class="key">dest:</span> <span class="path">/usr/share/keyrings/zabbix-official-repo.key</span>
+    <span class="key">mode:</span> <span class="val">'0644'</span>
+
+<span class="comment">- name: Aggiungi il repository APT di Zabbix</span>
+  <span class="key">ansible.builtin.apt_repository:</span>
+    <span class="key">repo:</span> <span class="val">"deb [signed-by=/usr/share/keyrings/zabbix-official-repo.key] https://repo.zabbix.com/zabbix/{{ zabbix_version }}/debian {{ zabbix_debian_release }} main"</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">filename:</span> <span class="val">zabbix</span>
+
+<span class="comment">- name: Aggiorna la cache apt dopo l'aggiunta del repository Zabbix</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">update_cache:</span> <span class="val">true</span>
+
+<span class="comment">- name: Installa MariaDB server</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span>
+      <span class="key">-</span> <span class="val">mariadb-server</span>
+      <span class="key">-</span> <span class="val">python3-pymysql</span>
+    <span class="key">state:</span> <span class="val">present</span>
+
+<span class="comment">- name: Abilita e avvia MariaDB</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">mariadb</span>
+    <span class="key">state:</span> <span class="val">started</span>
+    <span class="key">enabled:</span> <span class="val">true</span>
+
+<span class="comment">- name: Installa Zabbix server, frontend e agent</span>
+  <span class="key">ansible.builtin.apt:</span>
+    <span class="key">name:</span>
+      <span class="key">-</span> <span class="val">zabbix-server-mysql</span>
+      <span class="key">-</span> <span class="val">zabbix-frontend-php</span>
+      <span class="key">-</span> <span class="val">zabbix-apache-conf</span>
+      <span class="key">-</span> <span class="val">zabbix-sql-scripts</span>
+      <span class="key">-</span> <span class="val">zabbix-agent2</span>
+    <span class="key">state:</span> <span class="val">present</span>
+
+<span class="comment">- name: Crea il database Zabbix</span>
+  <span class="key">community.mysql.mysql_db:</span>
+    <span class="key">name:</span> <span class="val">"{{ zabbix_db_name }}"</span>
+    <span class="key">encoding:</span> <span class="val">utf8mb4</span>
+    <span class="key">collation:</span> <span class="val">utf8mb4_bin</span>
+    <span class="key">state:</span> <span class="val">present</span>
+    <span class="key">login_unix_socket:</span> <span class="path">/run/mysqld/mysqld.sock</span>
+
+<span class="comment">- name: Crea l'utente MariaDB per Zabbix</span>
+  <span class="key">community.mysql.mysql_user:</span>
+    <span class="key">name:</span> <span class="val">"{{ zabbix_db_user }}"</span>
+    <span class="key">password:</span> <span class="val">"{{ zabbix_db_password }}"</span>
+    <span class="key">priv:</span> <span class="val">"{{ zabbix_db_name }}.*:ALL"</span>
+    <span class="key">login_unix_socket:</span> <span class="path">/run/mysqld/mysqld.sock</span>
+    <span class="key">state:</span> <span class="val">present</span>
+
+<span class="comment">- name: Verifica se lo schema Zabbix è già stato importato</span>
+  <span class="key">ansible.builtin.command:</span> <span class="val">&gt;</span>
+    <span class="val">mysql -u{{ zabbix_db_user }} -p{{ zabbix_db_password }} {{ zabbix_db_name }}</span>
+    <span class="val">-e "SHOW TABLES LIKE 'users';"</span>
+  <span class="key">register:</span> <span class="val">zabbix_schema_check</span>
+  <span class="key">changed_when:</span> <span class="val">false</span>
+  <span class="key">failed_when:</span> <span class="val">false</span>
+
+<span class="comment">- name: Importa lo schema SQL iniziale di Zabbix (solo al primo run)</span>
+  <span class="key">ansible.builtin.shell:</span> <span class="val">&gt;</span>
+    <span class="val">zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz |</span>
+    <span class="val">mysql -u{{ zabbix_db_user }} -p{{ zabbix_db_password }} {{ zabbix_db_name }}</span>
+  <span class="key">when:</span>
+    <span class="key">-</span> <span class="val">zabbix_import_schema</span>
+    <span class="key">-</span> <span class="val">"'users' not in zabbix_schema_check.stdout"</span>
+  <span class="key">register:</span> <span class="val">zabbix_schema_import</span>
+  <span class="key">changed_when:</span> <span class="val">zabbix_schema_import.rc == 0</span>
+
+<span class="comment">- name: Configura DBPassword in zabbix_server.conf</span>
+  <span class="key">ansible.builtin.lineinfile:</span>
+    <span class="key">path:</span> <span class="path">/etc/zabbix/zabbix_server.conf</span>
+    <span class="key">regexp:</span> <span class="val">'^# ?DBPassword='</span>
+    <span class="key">line:</span> <span class="val">"DBPassword={{ zabbix_db_password }}"</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Zabbix server</span>
+
+<span class="comment">- name: Configura il timezone nel frontend PHP di Zabbix</span>
+  <span class="key">ansible.builtin.lineinfile:</span>
+    <span class="key">path:</span> <span class="path">/etc/zabbix/apache.conf</span>
+    <span class="key">regexp:</span> <span class="val">php_value date.timezone</span>
+    <span class="key">line:</span> <span class="val">"        php_value date.timezone {{ zabbix_frontend_timezone }}"</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+
+<span class="comment">- name: Abilita e avvia Zabbix server</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">zabbix-server</span>
+    <span class="key">state:</span> <span class="val">started</span>
+    <span class="key">enabled:</span> <span class="val">true</span>
+
+<span class="comment">- name: Abilita e avvia Zabbix agent2</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">zabbix-agent2</span>
+    <span class="key">state:</span> <span class="val">started</span>
+    <span class="key">enabled:</span> <span class="val">true</span>
+
+<span class="comment">- name: Riavvia Apache per applicare la configurazione Zabbix</span>
+  <span class="key">ansible.builtin.systemd:</span>
+    <span class="key">name:</span> <span class="val">apache2</span>
+    <span class="key">state:</span> <span class="val">restarted</span>
+</pre>
+
+  <div class="callout">
+    <strong>Nota:</strong> Lo schema SQL viene importato solo al primo run (controllo sulla presenza della tabella <strong>users</strong>). La password di default <strong>"lapassword"</strong> deve essere sostituita con un valore casuale memorizzato in vault. Frontend raggiungibile via Apache dopo il riavvio.
+  </div>
+</section>
+
+
+
+
+<section id="ts-mariadb">
+  <h2>I primi ostacoli, e gli ultimi: autenticazione, repository, dipendenze Apache</h2>
+
+  <h3>MariaDB: l'autenticazione di root</h3>
+  <pre><span class="comment">fatal: [SERVER]: FAILED! => {"changed": false, "msg": "unable to find /root/.my.cnf.
+Exception message: (1698, \"Access denied for user 'root'@'localhost'\")"}</span>
+</pre>
+  <p>Il modulo Ansible non riusciva a connettersi come utente <strong>root</strong> su <strong>localhost</strong>: sulle versioni recenti di MariaDB, l'utente root usa di default il plugin <strong>unix_socket</strong> (autenticazione basata sull'utente di sistema, non su password), che non è compatibile con l'autenticazione via <strong>.my.cnf</strong> che Ansible si aspetta.</p>
+  <p>Fix: impostare esplicitamente una password per root, e creare il file di credenziali che Ansible legge automaticamente.</p>
+  <pre><span class="key">ALTER USER</span> <span class="val">'root'@'localhost'</span> <span class="key">IDENTIFIED BY</span> <span class="val">'lapassword'</span>;
+<span class="key">FLUSH PRIVILEGES</span>;
+</pre>
+  <pre><span class="val">sudo nano /root/.my.cnf</span>
+</pre>
+  <pre><span class="sec">[client]</span>
+<span class="key">user</span>=<span class="val">root</span>
+<span class="key">password</span>=<span class="val">lapassword</span>
+</pre>
+  <pre><span class="val">sudo chmod 600 /root/.my.cnf</span>
+<span class="val">mysql --defaults-file=/root/.my.cnf -e "SHOW DATABASES;"</span>
+</pre>
+
+  <h3>Nota tecnica: IDENTIFIED BY vs IDENTIFIED VIA</h3>
+  <p>Il comando <strong>ALTER USER</strong>/<strong>CREATE USER</strong> permette di specificare il metodo di autenticazione in due modi diversi:</p>
+  <p><strong>IDENTIFIED BY 'stringa'</strong>: password classica; il server la cifra con l'algoritmo predefinito per connessioni standard.</p>
+  <p><strong>IDENTIFIED VIA plugin</strong>: delega il login a un modulo esterno. I casi più comuni sono <strong>unix_socket</strong> (autenticazione basata sull'utente Linux di sistema, senza password) o <strong>gssapi</strong>/<strong>pam</strong> (integrazione con domini aziendali).</p>
+  <p>Confondere i due, provando a combinarli, o usando <strong>VIA</strong> quando serve semplicemente <strong>BY</strong>, è la causa più comune di errori di sintassi quando si configura root da zero.</p>
+
+  <h3>Repository Tailscale: chiave GPG non gestibile</h3>
+  <pre><span class="comment">[ERROR]: Module failed: Either apt-key or gpg binary is required, but neither could
+be found. The apt-key CLI has been deprecated and removed in modern Debian and
+derivatives, you might want to use "deb822_repository" instead.</span>
+</pre>
+  <p>Il modulo per aggiungere il repository APT di Tailscale richiedeva <strong>apt-key</strong> o <strong>gpg</strong>, entrambi assenti sul sistema; <strong>apt-key</strong> è deprecato e rimosso nelle versioni moderne di Debian.</p>
+  <p>Fix: installare <strong>gnupg</strong> come dipendenza preliminare del ruolo.</p>
+  <pre><span class="val">sudo apt update && sudo apt install -y gnupg</span>
+</pre>
+
+  <h3>Koha: dipendenze Apache mancanti</h3>
+  <pre><span class="comment">Koha requires mod_rewrite to be enabled within Apache in order to run.</span>
+</pre>
+  <pre><span class="comment">Koha requires mod_cgi to be enabled within Apache in order to run.</span>
+</pre>
+  <p><strong>koha-create</strong> richiede alcuni moduli Apache non abilitati di default su un'installazione pulita — prima <strong>mod_rewrite</strong>, poi, al tentativo successivo, <strong>mod_cgi</strong>.</p>
+  <p>Fix: task dedicati con <strong>community.general.apache2_module</strong>, aggiunti in <span class="path">roles/koha/tasks/instance.yml</span> prima della creazione dell'istanza, così le dipendenze sono garantite ad ogni run.</p>
+  <pre><span class="comment">- name: Abilitare il modulo rewrite di Apache</span>
+  <span class="key">community.general.apache2_module:</span>
+    <span class="key">name:</span> <span class="val">rewrite</span>
+    <span class="key">state:</span> <span class="val">present</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+
+<span class="comment">- name: Abilitare il modulo cgi di Apache</span>
+  <span class="key">community.general.apache2_module:</span>
+    <span class="key">name:</span> <span class="val">cgi</span>
+    <span class="key">state:</span> <span class="val">present</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+</pre>
+
+  <h3>L'ultimo imprevisto: un'altra MariaDB, un'altra storia</h3>
+  <p>Se i problemi precedenti erano emersi nelle fasi iniziali del progetto, quello che segue è arrivato per ultimo, e su un'istanza MariaDB completamente diversa: non più quella del server Koha, ma la sua "cugina" dedicata a Zabbix, isolata per lo stesso principio che separa il monitoraggio dal servizio che sorveglia. Stesso cognome, tutt'altra vicenda.</p>
+  <p>Durante un test di cambio password sull'utente <strong>root</strong>, un passaggio saltato (il <span class="path">.my.cnf</span> non aggiornato in coppia con la password nel database) ha lasciato il sistema in uno stato incoerente: né la vecchia password né quella nuova risultavano valide.</p>
+  <pre><span class="val">mysql -u root</span>
+<span class="comment">Access denied for user 'root'@'localhost'</span>
+</pre>
+  <p>Recovery: avviare MariaDB in modalità di emergenza, che bypassa temporaneamente l'autenticazione, per poter reimpostare la password da zero.</p>
+  <pre><span class="val">sudo systemctl stop mariadb</span>
+<span class="val">sudo pkill -9 mariadbd</span>
+<span class="val">sudo mariadbd-safe --skip-grant-tables --skip-networking &</span>
+</pre>
+  <pre><span class="val">mysql -u root</span>
+</pre>
+  <pre><span class="key">FLUSH PRIVILEGES</span>;
+<span class="key">ALTER USER</span> <span class="val">'root'@'localhost'</span> <span class="key">IDENTIFIED BY</span> <span class="val">'lapassword'</span>;
+<span class="key">FLUSH PRIVILEGES</span>;
+</pre>
+  <pre><span class="val">sudo pkill mariadbd</span>
+<span class="val">sudo systemctl start mariadb</span>
+</pre>
+  <p>Verificato l'accesso con la nuova password, coerente sia nel database sia in <span class="path">/root/.my.cnf</span>, il servizio è tornato regolare.</p>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+<section id="ts-ldap">
+  <h2>Troubleshooting — Mapping LDAP — attributo "is"</h2>
+  
+  <h3>Sintomo</h3>
+  <p>Dopo aver configurato l'autenticazione LDAP in <strong>koha-conf.xml</strong>, il login all'interfaccia staff di Koha restituiva un Errore 500 generico. Nulla di utile nella pagina d'errore — la causa reale era solo nei log Apache:</p>
+
+  <pre><span class="key">tail</span> -n 20 <span class="path">/var/log/koha/biblioteca/intranet-error.log</span>
+
+<span class="val">AH01215: stderr from mainpage.pl: Can't use string ("MAIN") as a HASH ref
+while "strict refs" in use at /usr/share/koha/lib/C4/Auth_with_ldap.pm line 65</span>
+</pre>
+
+  <h3>Prima ipotesi</h3>
+  <p>Il blocco LDAP generato da Ansible aveva inizialmente questa forma:</p>
+
+  <pre><span class="key">&lt;mapping&gt;</span>
+  <span class="key">&lt;firstname</span> <span class="sec">field</span>=<span class="val">"givenName"</span> <span class="key">/&gt;</span>
+  <span class="key">&lt;surname</span> <span class="sec">field</span>=<span class="val">"sn"</span> <span class="key">/&gt;</span>
+  <span class="key">&lt;branchcode&gt;</span>MAIN<span class="key">&lt;/branchcode&gt;</span>
+  <span class="key">&lt;categorycode&gt;</span>PT<span class="key">&lt;/categorycode&gt;</span>
+  <span class="key">&lt;userid</span> <span class="sec">field</span>=<span class="val">"uid"</span> <span class="key">/&gt;</span>
+<span class="key">&lt;/mapping&gt;</span>
+</pre>
+
+  <p>L'attributo <strong>field=</strong> sembrava ragionevole (è il nome più intuitivo), ma non trovava riscontro nel codice. Un primo tentativo di correzione con <strong>is_key="0"</strong> ha solo spostato il problema: l'errore 500 è sparito, ma è comparso un nuovo errore:</p>
+
+  <pre><span class="val">No ldapserver "mapping for 'userid'" defined in KOHA_CONF
+at Auth_with_ldap.pm line 97</span>
+</pre>
+
+  <h3>La causa reale</h3>
+  <p>Leggendo direttamente il sorgente Perl (<strong>Auth_with_ldap.pm</strong>), il codice cerca esplicitamente la chiave <strong>is</strong>, non <strong>field</strong> né <strong>is_key</strong>:</p>
+
+  <pre><span class="key">my</span> <span class="val">$uid_field</span> = <span class="val">$mapping</span>{<span class="sec">userid</span>}-&gt;{<span class="sec">is</span>}
+    <span class="key">or die</span> <span class="val">ldapserver_error</span>(<span class="val">"mapping for 'userid'"</span>);
+</pre>
+
+  <p>Il file contiene anche, come commento POD (righe 555-595), la documentazione ufficiale della sintassi attesa — con tanto di esempio completo:</p>
+
+  <pre><span class="key">&lt;firstname</span>    <span class="sec">is</span>=<span class="val">"givenname"</span>     <span class="key">&gt;&lt;/firstname&gt;</span>
+<span class="key">&lt;branchcode</span>   <span class="sec">is</span>=<span class="val">"branch"</span>        <span class="key">&gt;</span>MAIN<span class="key">&lt;/branchcode&gt;</span>
+<span class="key">&lt;categorycode</span> <span class="sec">is</span>=<span class="val">"employeetype"</span>  <span class="key">&gt;</span>PT<span class="key">&lt;/categorycode&gt;</span>
+</pre>
+
+  <p>Il nome dell'elemento XML è il campo Koha (es. <strong>branchcode</strong>), l'attributo <strong>is</strong> indica l'attributo LDAP corrispondente, e il testo tra i tag (se presente) è il valore di default statico usato quando LDAP non restituisce nulla per quel campo.</p>
+
+  <h3>Il fix</h3>
+  <p>Riscritto l'intero blocco <strong>&lt;mapping&gt;</strong> con la sintassi corretta, e integrato nel ruolo Ansible con <strong>blockinfile</strong> per restare gestito automaticamente ad ogni run:</p>
+
+  <pre><span class="comment">- name: Configurare l'autenticazione OpenLDAP in koha-conf.xml</span>
+  <span class="key">ansible.builtin.blockinfile:</span>
+    <span class="key">path:</span> <span class="path">"/etc/koha/sites/{{ koha_instance_name }}/koha-conf.xml"</span>
+    <span class="key">marker:</span> <span class="val">"&lt;!-- {mark} ANSIBLE MANAGED BLOCK: LDAP --&gt;"</span>
+    <span class="key">insertbefore:</span> <span class="val">"&lt;/config&gt;"</span>
+    <span class="key">block:</span> <span class="val">|</span>
+      <span class="key">&lt;useldapserver&gt;</span><span class="val">1</span><span class="key">&lt;/useldapserver&gt;</span>
+      <span class="key">&lt;ldapserver</span> <span class="sec">id</span>=<span class="val">"ldapserver"</span><span class="key">&gt;</span>
+        <span class="key">&lt;hostname&gt;</span><span class="val">{{ ldap_host }}</span><span class="key">&lt;/hostname&gt;</span>
+        <span class="key">&lt;port&gt;</span><span class="val">389</span><span class="key">&lt;/port&gt;</span>
+        <span class="key">&lt;base&gt;</span><span class="val">ou=users,{{ ldap_base_dn }}</span><span class="key">&lt;/base&gt;</span>
+        <span class="key">&lt;user&gt;</span><span class="val">{{ ldap_admin_dn }}</span><span class="key">&lt;/user&gt;</span>
+        <span class="key">&lt;pass&gt;</span><span class="val">{{ ldap_admin_pass }}</span><span class="key">&lt;/pass&gt;</span>
+        <span class="key">&lt;replicate&gt;</span><span class="val">1</span><span class="key">&lt;/replicate&gt;</span>
+        <span class="key">&lt;update&gt;</span><span class="val">1</span><span class="key">&lt;/update&gt;</span>
+        <span class="key">&lt;mapping&gt;</span>
+          <span class="key">&lt;firstname</span>    <span class="sec">is</span>=<span class="val">"givenName"</span>      <span class="key">&gt;&lt;/firstname&gt;</span>
+          <span class="key">&lt;surname</span>      <span class="sec">is</span>=<span class="val">"sn"</span>             <span class="key">&gt;&lt;/surname&gt;</span>
+          <span class="key">&lt;address</span>      <span class="sec">is</span>=<span class="val">"postalAddress"</span>  <span class="key">&gt;&lt;/address&gt;</span>
+          <span class="key">&lt;email</span>        <span class="sec">is</span>=<span class="val">"mail"</span>           <span class="key">&gt;&lt;/email&gt;</span>
+          <span class="key">&lt;branchcode</span>   <span class="sec">is</span>=<span class="val">"branch"</span>         <span class="key">&gt;</span>MAIN<span class="key">&lt;/branchcode&gt;</span>
+          <span class="key">&lt;categorycode</span> <span class="sec">is</span>=<span class="val">"employeetype"</span>   <span class="key">&gt;</span>PT<span class="key">&lt;/categorycode&gt;</span>
+          <span class="key">&lt;userid</span>       <span class="sec">is</span>=<span class="val">"uid"</span>            <span class="key">&gt;&lt;/userid&gt;</span>
+          <span class="key">&lt;password</span>     <span class="sec">is</span>=<span class="val">"userPassword"</span>   <span class="key">&gt;&lt;/password&gt;</span>
+        <span class="key">&lt;/mapping&gt;</span>
+      <span class="key">&lt;/ldapserver&gt;</span>
+  <span class="key">notify:</span> <span class="val">Riavviare Apache</span>
+</pre>
+
+  <div class="callout green">
+    <strong>Conclusione:</strong> Il nome più "intuitivo" per un attributo di configurazione (<strong>field=</strong>) non è sempre quello corretto: quando la documentazione ufficiale scarseggia o è ambigua, il sorgente del software resta la fonte di verità più affidabile — in questo caso, letteralmente commentato nel codice stesso.
+  </div>
+</section>
+
+
+
+
+
+
+<section id="ts-headscale">
+  <h2>Troubleshooting — Headscale — porta &amp; permessi</h2>
+  <p>Prima di arrivare a Headscale, il primo tentativo di VPN mesh per questo progetto era stato Tailscale nella sua forma originale (coordination server cloud ufficiale). La scelta è poi ricaduta su Headscale, l'implementazione open source e self-hosted dello stesso protocollo, per restare coerente con l'approccio self-hosted del resto dell'infrastruttura, senza dipendenze da un coordination server di terzi.</p>
+  <p>Il primo avvio del servizio non è stato indolore: tre problemi distinti, ciascuno diagnosticato con <strong>journalctl</strong> prima di trovare il fix.</p>
+
+  <h3>1. Variabile di versione non definita</h3>
+  <pre><span class="val">Error while resolving value for 'dest': 'headscale_version' is undefined</span>
+</pre>
+  <p>Il ruolo Ansible richiede esplicitamente la versione di Headscale da scaricare, senza un valore di default preimpostato — una scelta voluta, per evitare di installare silenziosamente una versione obsoleta. Verificata su GitHub l'ultima release stabile, il fix è stata una semplice aggiunta in <strong>group_vars/all.yml</strong>:</p>
+  <pre><span class="key">headscale_version:</span> <span class="val">"0.29.2"</span>
+</pre>
+
+  <h3>2. Chiave privata su filesystem in sola lettura</h3>
+  <p>Il servizio partiva e moriva subito, in loop di restart. <strong>journalctl -u headscale</strong> ha rivelato la causa:</p>
+  <pre><span class="val">Error: initializing: creating new headscale: reading or creating Noise protocol
+private key: saving private key to disk at path "/etc/headscale/noise_private.key":
+open /etc/headscale/noise_private.key: read-only file system</span>
+</pre>
+  <p>Il file <strong>.service</strong> del pacchetto Debian applica hardening di sicurezza con <strong>ProtectSystem=strict</strong>, che rende <strong>/etc</strong> di sola lettura per il processo. Il file stesso prevedeva già la soluzione, ma commentata di default:</p>
+  <pre><span class="comment"># WorkingDirectory=/var/lib/headscale</span>
+<span class="comment"># ReadWritePaths=/var/lib/headscale</span>
+</pre>
+  <p>Invece di forzare un override systemd, la scelta è stata allinearsi al comportamento già previsto dal pacchetto: spostare il path delle chiavi da <strong>/etc/headscale</strong> a <strong>/var/lib/headscale</strong> direttamente nel template <strong>config.yaml.j2</strong> — coerente con la distinzione tra configurazione statica (<strong>/etc</strong>) e dati generati a runtime (<strong>/var/lib</strong>).</p>
+  <pre><span class="key">private_key_path:</span> <span class="path">{{ headscale_data_dir }}/private.key</span>
+<span class="key">noise:</span>
+  <span class="key">private_key_path:</span> <span class="path">{{ headscale_data_dir }}/noise_private.key</span>
+</pre>
+
+  <h3>3. Conflitto di porta con Apache/Koha</h3>
+  <p>Risolto il problema delle chiavi, il servizio continuava comunque a fallire:</p>
+  <pre><span class="val">Error: headscale ran into an error and had to shut down: binding to TCP address:
+listen tcp 127.0.0.1:8080: bind: address already in use</span>
+</pre>
+  <p>La porta <strong>8080</strong> era già occupata da Apache, che su questa stessa macchina serve anche la staff interface di Koha. Il fix ha richiesto di aggiornare la porta di Headscale in <strong>group_vars/all/vars.yml</strong>, sia in <strong>headscale_server_url</strong> sia in <strong>headscale_listen_port</strong>. Quest'ultima variabile, combinata con <strong>listen_addr</strong> nel template, determina l'indirizzo completo (IP:porta) su cui il servizio ascolta réellement nel <strong>config.yaml</strong> generato sul server.</p>
+
+  <h3>/koha-ansible/group_vars/all/vars.yml</h3>
+  <pre><span class="key">headscale_server_url:</span> <span class="val">"http://192.168.1.4:8443"</span>
+<span class="key">headscale_listen_port:</span> <span class="port">8443</span>
+</pre>
+
+  <h3>/koha-ansible/roles/headscale/templates/config.yaml.j2</h3>
+  <pre><span class="key">listen_addr:</span> <span class="val">0.0.0.0:{{ headscale_listen_port }}</span>
+</pre>
+
+  <h3>/etc/headscale/config.yaml (generato sul server)</h3>
+  <pre><span class="key">server_url:</span> <span class="val">http://192.168.1.4:8443</span>
+<span class="key">listen_addr:</span> <span class="val">0.0.0.0:8443</span>
+</pre>
+</section>
+
+
+
+
+
+
+<section id="ts-proxyjump">
+  <h2>WSL, routing & ProxyJump</h2>
+
+  <h3>Sintomo</h3>
+  <p>Con la VM Zabbix collegata alla nuova rete interna LAN03, il primo ostacolo non è arrivato dal ruolo Ansible, ma da qualcosa di più a monte: il control node stesso.</p>
+  <p><strong>ansible-playbook</strong> falliva sull'host Zabbix con un timeout SSH:</p>
+  <pre><span class="comment">Data could not be sent to remote host "10.0.0.20". Make sure this host can be
+reached over ssh: ssh: connect to host </span><span class="ip">10.0.0.20</span><span class="comment"> port </span><span class="port">22</span><span class="comment"> Connection timed out</span>
+</pre>
+  <p>Il server principale (Koha), sulla stessa esecuzione, funzionava senza problemi — il timeout era isolato alla nuova macchina.</p>
+
+  <h3>Prima ipotesi: il firewall</h3>
+  <p>Il primo sospetto è caduto sulla chain forward del gateway, che permetteva solo traffico verso una porta specifica:</p>
+  <pre><span class="key">chain</span> <span class="sec">forward</span> {
+    <span class="key">type</span> <span class="val">filter</span> <span class="key">hook</span> <span class="val">forward</span> <span class="key">priority</span> <span class="val">filter</span>; <span class="key">policy</span> <span class="val">drop</span>;
+    <span class="key">ct</span> <span class="key">state</span> <span class="val">established,related</span> <span class="val">accept</span>
+    <span class="key">iifname</span> <span class="val">"enp0s3"</span> <span class="key">oifname</span> <span class="val">"enp0s8"</span> <span class="key">ip</span> <span class="key">daddr</span> <span class="ip">10.0.0.20</span> <span class="key">tcp</span> <span class="key">dport</span> <span class="port">22</span> <span class="val">accept</span>
+}
+</pre>
+  <p>Ipotesi corretta solo in parte: mancava effettivamente la regola per il traffico generico in uscita da LAN03 verso l'esterno (nessun ping verso indirizzi pubblici passava), risolta aggiungendo:</p>
+  <pre><span class="key">iifname</span> <span class="val">"enp0s8"</span> <span class="key">oifname</span> <span class="val">"enp0s3"</span> <span class="val">accept</span>
+</pre>
+  <p>Ma anche dopo questo fix, il ping da WSL verso <span class="ip">10.0.0.20</span> continuava a fallire — mentre lo stesso ping, lanciato dal server verso la VM Zabbix, funzionava perfettamente.</p>
+
+  <h3>La causa reale: WSL2 non è sulla rete locale</h3>
+  <p>WSL2 gira in una VM Hyper-V gestita da Windows, con una propria subnet NAT interna (nell'esempio, <span class="ip">172.27.176.0/20</span>). In questo caso, riusciva a comunicare con il server (<span class="ip">192.168.1.4</span>) perché si trovava, in pratica, sulla stessa rete di Windows ma, non c'era rotta che permettesse la comunicazione verso LAN03.</p>
+  <pre><span class="comment">ip route</span>
+
+<span class="key">default</span> <span class="key">via</span> <span class="ip">172.27.176.1</span> <span class="key">dev</span> <span class="iface">eth0</span> <span class="val">proto kernel</span>
+<span class="ip">172.27.176.0/20</span> <span class="key">dev</span> <span class="iface">eth0</span> <span class="val">proto kernel scope link src</span> <span class="ip">172.27.178.197</span>
+</pre>
+  <p>Nessuna rotta verso <span class="ip">10.0.0.0/24</span>. Il tentativo di aggiungerla manualmente ha confermato il limite strutturale:</p>
+  <pre><span class="val">sudo ip route add </span><span class="ip">10.0.0.0/24</span><span class="val"> via </span><span class="ip">192.168.1.4</span>
+<span class="comment"># Error: Nexthop has invalid gateway.</span>
+</pre>
+  <p>WSL2 non accetta un gateway che non sia sulla propria subnet diretta — la modalità di rete "mirrored" che risolverebbe il problema alla radice richiede Windows 11, non disponibile in questo caso.</p>
+
+  <h3>Il fix: ProxyJump SSH</h3>
+  <p>Invece di forzare il routing di WSL, la soluzione è stata sfruttare la connettività già funzionante del server verso LAN03, usandolo come ponte:</p>
+  <pre><span class="val">ssh -J root@</span><span class="ip">192.168.1.4</span><span class="val"> root@</span><span class="ip">10.0.0.20</span>
+</pre>
+  <p>Reso permanente nell'inventory Ansible:</p>
+  <pre><span class="sec">[zabbix]</span>
+<span class="key">ZABBIX</span> <span class="key">ansible_host</span>=<span class="ip">10.0.0.20</span> <span class="key">ansible_user</span>=<span class="val">root</span> <span class="key">ansible_ssh_common_args</span>=<span class="val">'-o ProxyJump=root@192.168.1.4'</span>
+</pre>
+
+  <h3>Un ultimo ostacolo: PermitRootLogin</h3>
+  <p>Il primo tentativo di autenticazione con password, attraverso il ProxyJump, veniva comunque rifiutato:</p>
+  <pre><span class="comment">Permission denied (publickey,password)</span>
+</pre>
+  <p>La causa: <span class="path">/etc/ssh/sshd_config</span> sulla VM Zabbix aveva <strong>PermitRootLogin prohibit-password</strong> — root può accedere solo con chiave SSH, mai con password, indipendentemente da quanto questa sia corretta. La chiave pubblica è stata quindi copiata manualmente in <span class="path">/root/.ssh/authorized_keys</span> sulla VM, passando dal server già raggiungibile:</p>
+  <pre><span class="val">ssh root@</span><span class="ip">10.0.0.20</span><span class="val"> "mkdir -p /root/.ssh && echo 'ssh-ed25519 AAAA...' >> /root/.ssh/authorized_keys && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"</span>
+</pre>
+  <p>Da quel momento, l'autenticazione via ProxyJump è passata a chiave, e il playbook ha raggiunto ZABBIX senza ulteriori intoppi.</p>
+
+  <h3>Un ultimo strato: la chain input</h3>
+  <p>Risolto il ProxyJump, un problema simile si è ripresentato il giorno successivo, stavolta non su SSH, ma sull'accesso via browser a due servizi diversi: l'interfaccia web di Zabbix e la staff interface di Koha, entrambi irraggiungibili nonostante i servizi risultassero attivi e in ascolto correttamente.</p>
+  <p>Headscale (porta 8443): il client sulla VM Zabbix non riusciva a completare la registrazione presso il server:</p>
+  <pre><span class="comment">Received error: fetch control key: Get "http://</span><span class="ip">192.168.1.4</span><span class="comment">:</span><span class="port">8443</span><span class="comment">/key?v=138":
+dial tcp </span><span class="ip">192.168.1.4</span><span class="comment">:</span><span class="port">8443</span><span class="comment">: connect: connection timed out</span>
+</pre>
+  <p>Prima ipotesi verificata (e confermata, ma non sufficiente da sola): Headscale ascoltava solo su <span class="ip">127.0.0.1</span><span class="port">:8443</span>, non raggiungibile da altre macchine. Corretto il <strong>listen_addr</strong> a <span class="ip">0.0.0.0</span><span class="port">:8443</span> nel template, il problema persisteva comunque — mancava ancora una regola nella chain input del gateway (non forward, perché il traffico è diretto al servizio in esecuzione sul gateway stesso, non lo attraversa per raggiungere un'altra macchina):</p>
+  <pre><span class="key">tcp</span> <span class="key">dport</span> <span class="port">8443</span> <span class="val">accept</span>
+</pre>
+  <p>Koha (porta 8080): stesso pattern, un giorno dopo. Da WSL il ping verso il server funzionava, ma curl andava in timeout dopo lunga attesa:</p>
+  <pre><span class="comment">curl: (28) Failed to connect to </span><span class="ip">192.168.1.4</span><span class="comment"> port </span><span class="port">8080</span><span class="comment"> after 21004 ms</span>
+</pre>
+  <p>Apache era correttamente in ascolto su <span class="val">*</span><span class="port">:8080</span> (verificato con <strong>ss -tlnp</strong>), e rispondeva regolarmente quando interrogato localmente dal server stesso. Anche qui, la causa era la stessa: mancava la regola input dedicata alla porta 8080.</p>
+
+
+<div class="callout green">
+  <strong>Conclusione:</strong>
+  <p>Il sintomo iniziale (timeout SSH, poi timeout HTTP) suggeriva ogni volta un problema di firewall — ed era vero, ma non nel punto in cui si guardava per primo. Vale la pena distinguere sempre le due chain: <strong>forward</strong> per il traffico che il gateway deve instradare verso un'altra macchina, <strong>input</strong> per il traffico diretto al gateway stesso. Un servizio che gira sul gateway (come Headscale o, più in generale, qualsiasi demone in ascolto su quella macchina) richiede sempre una regola input dedicata — indipendentemente da quanto sia permissiva la chain forward, che governa tutt'altro traffico.</p>
+</div>
+</section>
+
+
+
+
+
+
+<footer class="mobile-footer">
+    <span>© Alessandro Muzi</span>
+    <span class="sep">•</span>
+    <span>2026</span>
+  </footer>
+
+
+</main>
+
+
+
+
+<script>
+  const links = [...document.querySelectorAll('nav a[href^="#"]')];
+  
+  // Prende esattamente gli ID collegati al menu
+  const sections = links.map(a => {
+    const id = a.getAttribute('href').slice(1);
+    return document.getElementById(id);
+  }).filter(Boolean);
+
+  let current = null;
+
+  function sync() {
+    let active = sections[0];
+
+    // Guarda la posizione reale dell'elemento sullo schermo
+    for (const s of sections) { 
+      // 200px è la nostra linea magica (i 180px del CSS + 20px di tolleranza)
+      if (s.getBoundingClientRect().top <= 200) { 
+        active = s; 
+      } else { 
+        break; 
+      }
+    }
+
+    // Se l'utente è arrivato in fondo alla pagina, forza l'ultima voce
+    if (Math.ceil(window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 2) {
+      active = sections[sections.length - 1];
+    }
+
+    if (!active || active === current) return;
+    current = active;
+
+    // Spegni tutto e accendi solo la voce corretta
+    links.forEach(a => a.classList.remove('active'));
+    const activeLink = links.find(a => a.getAttribute('href') === '#' + active.id);
+    if (activeLink) activeLink.classList.add('active');
+  }
+
+  let ticking = false;
+  function onScroll() {
+    if (!ticking) {
+      requestAnimationFrame(() => { 
+        sync(); 
+        ticking = false; 
+      });
+      ticking = true;
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', sync);
+  sync();
+</script>
+</body>
+</html>
