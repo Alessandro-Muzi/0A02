@@ -2056,7 +2056,7 @@ automatizzata del server </h>
 <span class="comment">- name: Distribuisci il file di configurazione config.yaml</span>
   <span class="key">ansible.builtin.template:</span>
     <span class="key">src:</span> <span class="path">config.yaml.j2</span>
-    <span class="key">dest:</span> <span class="path">{{ headscale_config_dir }}/config.yaml</span>
+    <span class="key">dest:</span> <span class="path">"{{ headscale_config_dir }}/config.yaml"</span>
     <span class="key">owner:</span> <span class="val">headscale</span>
     <span class="key">group:</span> <span class="val">headscale</span>
     <span class="key">mode:</span> <span class="val">'0640'</span>
