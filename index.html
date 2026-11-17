@@ -1161,7 +1161,7 @@ html { filter: grayscale(var(--gray)) contrast(1.03); }
 
 /*  0.4  1.04 */
 
-/* Grazie Giangi! */
+
 </style>
 
 
@@ -1459,6 +1459,7 @@ automatizzata del server </h>
   <span class="key">hosts:</span> <span class="val">debian</span>
   <span class="key">become:</span> <span class="val">yes</span>
   <span class="key">roles:</span>
+    <span class="key">-</span> <span class="val">nftables</span>
     <span class="key">-</span> <span class="val">mariadb</span>
     <span class="key">-</span> <span class="val">headscale</span>
     <span class="key">-</span> <span class="val">bind9</span>
